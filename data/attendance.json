@@ -1,0 +1,16 @@
+[
+  {
+    "tanggal": "2026-10-01",
+    "status": "Hadir",
+    "jamMasuk": "07:45",
+    "jamPulang": "16:30",
+    "keterangan": "Tepat waktu di Ruang IT"
+  },
+  {
+    "tanggal": "2026-10-12",
+    "status": "Hadir",
+    "jamMasuk": "07:50",
+    "jamPulang": "16:30",
+    "keterangan": "Hadir di Ruang IT / Server"
+  }
+]

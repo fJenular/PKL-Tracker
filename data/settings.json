@@ -1,0 +1,22 @@
+{
+  "profile": {
+    "namaSiswa": "Fakhri Zainul Arifin",
+    "nis": "2324009",
+    "sekolah": "SMK TI BAZMA",
+    "tempatPkl": "Yayasan Kesehatan Pertamina",
+    "bulanPelaksanaan": "Oktober 2026",
+    "pembimbingPkl": "Muhammad Dzikri Fauzan",
+    "userDuDi": "Achmad Fauzy",
+    "pesertaPkl": "Fakhri Zainul Arifin",
+    "defaultTempat": "Ruang IT / Server"
+  },
+  "google": {
+    "syncMethod": "apps_script",
+    "webAppUrl": "https://script.google.com/macros/s/AKfycbzScS4mT770Aup0OopB4X6jsCEfoSftlgysyINwrBvpH-2-2O7R4et8mHc2by1pxkxj/exec",
+    "spreadsheetId": "15tFaxo-AJQNFBLAhUZEwjvEQYiY3twCzwl0vEFlIWnw",
+    "sheetName": "Sheet1",
+    "serviceAccountEmail": "",
+    "privateKey": "",
+    "isConfigured": true
+  }
+}
