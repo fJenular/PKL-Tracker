@@ -3,6 +3,12 @@
 :root {
   --background: #f2f3f7;
   --foreground: #14151a;
+  --font-zen-dots: 'Zen Dots', -apple-system, BlinkMacSystemFont, 'Segoe UI', monospace, sans-serif;
+}
+
+.font-zen-dots {
+  font-family: var(--font-zen-dots);
+  letter-spacing: -0.02em;
 }
 
 body {
@@ -61,6 +67,37 @@ body {
   from { transform: scale(0.95); }
   to { transform: scale(1); }
 }
+@keyframes float-slow {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(1.2deg);
+  }
+}
+@keyframes float-reverse {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(7px) rotate(-1.5deg);
+  }
+}
+@keyframes tick-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-float-slow {
+  animation: float-slow 6s ease-in-out infinite;
+}
+.animate-float-reverse {
+  animation: float-reverse 7s ease-in-out infinite;
+}
 .animate-in {
   animation-duration: 150ms;
   animation-fill-mode: both;
@@ -69,6 +106,48 @@ body {
 .fade-in { animation-name: fade-in; }
 .zoom-in-95 { animation-name: zoom-in-95; }
 .duration-150 { animation-duration: 150ms; }
+
+/* Dynamic Seconds Ticking & Flip Animation for Zen Dots Clock */
+@keyframes second-flip-3d {
+  0% {
+    transform: perspective(350px) rotateX(-75deg) translateY(-3px) scale(0.92);
+    opacity: 0.15;
+    filter: blur(1.5px);
+    transform-origin: 50% 10%;
+  }
+  60% {
+    transform: perspective(350px) rotateX(12deg) translateY(0.5px) scale(1.04);
+    opacity: 1;
+    filter: blur(0px);
+    transform-origin: 50% 10%;
+  }
+  100% {
+    transform: perspective(350px) rotateX(0deg) translateY(0) scale(1);
+    opacity: 1;
+    filter: blur(0px);
+    transform-origin: 50% 10%;
+  }
+}
+
+.animate-second-flip {
+  display: inline-block;
+  animation: second-flip-3d 0.38s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes second-dot-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.25;
+    transform: scale(0.85);
+  }
+}
+
+.animate-second-dot {
+  animation: second-dot-pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
 
 /* Print Styles */
 @media print {

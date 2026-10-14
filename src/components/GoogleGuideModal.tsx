@@ -23,12 +23,15 @@ export default function GoogleGuideModal({
   const appsScriptCode = `function doPost(e) {
   try {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getSheetByName("Sheet1") || ss.getActiveSheet();
     var data = JSON.parse(e.postData.contents);
     var tasks = Array.isArray(data) ? data : [data];
     
     for (var i = 0; i < tasks.length; i++) {
       var t = tasks[i];
+      // Cari tab sheet per bulan (contoh: "Agustus", "September", "Oktober")
+      var targetSheetName = t.sheetName || t.bulan || "Oktober";
+      var sheet = ss.getSheetByName(targetSheetName) || ss.getActiveSheet();
+
       var catatan = t.catatan || "";
       if (t.tempat) {
         catatan = catatan ? "[Tempat: " + t.tempat + "] " + catatan : "[Tempat: " + t.tempat + "]";

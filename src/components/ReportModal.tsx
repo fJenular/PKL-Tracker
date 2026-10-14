@@ -1,9 +1,27 @@
 'use client';
 
-import React, { useState } from 'react';
-import { X, Printer, Download, ExternalLink, Calendar, CheckSquare, Square, FileText } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { 
+  X, 
+  Printer, 
+  Download, 
+  ExternalLink, 
+  Calendar, 
+  CheckSquare, 
+  Square, 
+  FileText, 
+  Filter, 
+  CalendarRange, 
+  ChevronDown,
+  Edit3
+} from 'lucide-react';
 import { Task, AppSettings } from '@/types';
-import { formatDateToIndonesian } from '@/lib/dateUtils';
+import { 
+  formatDateToIndonesian, 
+  getBulanFromDate, 
+  getBulanTahunFromDate, 
+  formatMonthRange 
+} from '@/lib/dateUtils';
 
 interface ReportModalProps {
   isOpen: boolean;
@@ -11,6 +29,9 @@ interface ReportModalProps {
   tasks: Task[];
   settings: AppSettings | null;
   initialSelectedIds?: string[];
+  initialMonth?: string;
+  initialDateFrom?: string;
+  initialDateTo?: string;
 }
 
 export default function ReportModal({
@@ -18,16 +39,126 @@ export default function ReportModal({
   onClose,
   tasks,
   settings,
-  initialSelectedIds
+  initialSelectedIds,
+  initialMonth = 'all',
+  initialDateFrom = '',
+  initialDateTo = ''
 }: ReportModalProps) {
   const [groupByDate, setGroupByDate] = useState(true);
-  const [selectedIds, setSelectedIds] = useState<string[]>(
-    initialSelectedIds && initialSelectedIds.length > 0
-      ? initialSelectedIds
-      : tasks.map(t => t.id)
+  const [filterMode, setFilterMode] = useState<'month' | 'range' | 'selected'>(
+    initialDateFrom || initialDateTo
+      ? 'range'
+      : initialMonth !== 'all'
+      ? 'month'
+      : initialSelectedIds && initialSelectedIds.length > 0 && initialSelectedIds.length < tasks.length
+      ? 'selected'
+      : 'month'
   );
+  
+  const [selectedMonth, setSelectedMonth] = useState<string>(initialMonth || 'all');
+  const [dateFrom, setDateFrom] = useState<string>(initialDateFrom || '');
+  const [dateTo, setDateTo] = useState<string>(initialDateTo || '');
+  const [customBulanPelaksanaan, setCustomBulanPelaksanaan] = useState<string>('');
+  const [isEditingBulan, setIsEditingBulan] = useState(false);
+
+  // Available months (YYYY-MM)
+  const availableMonths = useMemo(() => {
+    const map = new Map<string, string>();
+    ['2026-10', '2026-09', '2026-08'].forEach((ym) => {
+      map.set(ym, getBulanTahunFromDate(`${ym}-01`));
+    });
+    tasks.forEach((t) => {
+      if (t.tanggal && t.tanggal.length >= 7) {
+        const ym = t.tanggal.slice(0, 7);
+        if (!map.has(ym)) {
+          map.set(ym, getBulanTahunFromDate(`${ym}-01`));
+        }
+      }
+    });
+    return Array.from(map.entries())
+      .map(([key, label]) => ({ key, label }))
+      .sort((a, b) => b.key.localeCompare(a.key));
+  }, [tasks]);
+
+  // Selected Task IDs state
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  // Calculate automatically derived Bulan Pelaksanaan
+  const autoBulanPelaksanaan = useMemo(() => {
+    if (filterMode === 'month') {
+      if (selectedMonth === 'all') {
+        return settings?.profile.bulanPelaksanaan || 'Oktober 2026';
+      }
+      const found = availableMonths.find((m) => m.key === selectedMonth);
+      return found ? found.label : getBulanTahunFromDate(`${selectedMonth}-01`);
+    }
+
+    if (filterMode === 'range') {
+      if (dateFrom || dateTo) {
+        return formatMonthRange(dateFrom, dateTo);
+      }
+      return settings?.profile.bulanPelaksanaan || 'Oktober 2026';
+    }
+
+    // If 'selected' mode, detect from selected tasks dates
+    if (selectedIds.length > 0) {
+      const dates = tasks
+        .filter((t) => selectedIds.includes(t.id))
+        .map((t) => t.tanggal)
+        .filter(Boolean)
+        .sort();
+      if (dates.length > 0) {
+        return formatMonthRange(dates[0], dates[dates.length - 1]);
+      }
+    }
+
+    return settings?.profile.bulanPelaksanaan || 'Oktober 2026';
+  }, [filterMode, selectedMonth, dateFrom, dateTo, selectedIds, availableMonths, settings, tasks]);
+
+  // Sync state on open
+  useEffect(() => {
+    if (isOpen) {
+      if (initialDateFrom || initialDateTo) {
+        setFilterMode('range');
+        setDateFrom(initialDateFrom || '');
+        setDateTo(initialDateTo || '');
+      } else if (initialMonth && initialMonth !== 'all') {
+        setFilterMode('month');
+        setSelectedMonth(initialMonth);
+      }
+      setCustomBulanPelaksanaan('');
+      setIsEditingBulan(false);
+    }
+  }, [isOpen, initialMonth, initialDateFrom, initialDateTo]);
+
+  // Update selectedIds when filter changes
+  useEffect(() => {
+    if (!isOpen) return;
+
+    if (filterMode === 'selected' && initialSelectedIds && initialSelectedIds.length > 0) {
+      setSelectedIds(initialSelectedIds);
+      return;
+    }
+
+    let matching = tasks;
+    if (filterMode === 'month') {
+      if (selectedMonth !== 'all') {
+        matching = tasks.filter((t) => t.tanggal.startsWith(selectedMonth));
+      }
+    } else if (filterMode === 'range') {
+      matching = tasks.filter((t) => {
+        const matchFrom = !dateFrom || t.tanggal >= dateFrom;
+        const matchTo = !dateTo || t.tanggal <= dateTo;
+        return matchFrom && matchTo;
+      });
+    }
+
+    setSelectedIds(matching.map((t) => t.id));
+  }, [isOpen, filterMode, selectedMonth, dateFrom, dateTo, tasks]);
 
   if (!isOpen) return null;
+
+  const currentBulanPelaksanaan = customBulanPelaksanaan.trim() || autoBulanPelaksanaan;
 
   // Selected tasks sorted by date ascending
   const selectedTasks = tasks
@@ -68,6 +199,7 @@ export default function ReportModal({
     const params = new URLSearchParams();
     params.set('ids', selectedIds.join(','));
     params.set('grouped', groupByDate ? 'true' : 'false');
+    params.set('bulan', currentBulanPelaksanaan);
     window.open(`/print?${params.toString()}`, '_blank');
   };
 
@@ -124,13 +256,13 @@ export default function ReportModal({
                 onChange={(e) => setGroupByDate(e.target.checked)}
                 className="rounded text-emerald-600 focus:ring-emerald-500"
               />
-              <span className="font-medium">Gabungkan kegiatan per hari (Rekomendasi)</span>
+              <span className="font-medium">Gabungkan kegiatan per hari</span>
             </label>
 
             {/* Print in dedicated tab */}
             <button
               onClick={handleOpenPrintPage}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
               title="Buka halaman cetak di tab baru"
             >
               <ExternalLink className="w-3.5 h-3.5" />
@@ -140,7 +272,7 @@ export default function ReportModal({
             {/* Print / Save PDF Button */}
             <button
               onClick={handlePrint}
-              className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm transition-all"
+              className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm transition-all cursor-pointer"
             >
               <Printer className="w-4 h-4" />
               <span>Cetak / Simpan PDF</span>
@@ -149,30 +281,174 @@ export default function ReportModal({
             {/* Close */}
             <button
               onClick={onClose}
-              className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-lg transition-colors ml-1"
+              className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-lg transition-colors ml-1 cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
         </div>
 
+        {/* Filter Ekspor & Penyesuaian Bulan Pelaksanaan Bar (Hidden on print) */}
+        <div className="no-print px-6 py-3 bg-white border-b border-slate-200 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            {/* Mode Selector */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+                <Filter className="w-3.5 h-3.5 text-emerald-600" />
+                Pilih Periode:
+              </span>
+              <div className="inline-flex rounded-lg border border-slate-200 p-0.5 bg-slate-50 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setFilterMode('month')}
+                  className={`px-2.5 py-1 rounded-md font-medium transition-colors cursor-pointer ${
+                    filterMode === 'month'
+                      ? 'bg-white text-emerald-700 shadow-2xs font-semibold'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Per Bulan
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilterMode('range')}
+                  className={`px-2.5 py-1 rounded-md font-medium transition-colors cursor-pointer ${
+                    filterMode === 'range'
+                      ? 'bg-white text-emerald-700 shadow-2xs font-semibold'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Rentang Tanggal
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilterMode('selected')}
+                  className={`px-2.5 py-1 rounded-md font-medium transition-colors cursor-pointer ${
+                    filterMode === 'selected'
+                      ? 'bg-white text-emerald-700 shadow-2xs font-semibold'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Manual Checklist
+                </button>
+              </div>
+            </div>
+
+            {/* Input Controls based on Mode */}
+            <div className="flex flex-wrap items-center gap-2">
+              {filterMode === 'month' && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-slate-500">Pilih Bulan:</span>
+                  <select
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(e.target.value)}
+                    className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 bg-white font-medium text-slate-800 cursor-pointer focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                  >
+                    <option value="all">Semua Bulan PKL</option>
+                    {availableMonths.map((m) => (
+                      <option key={m.key} value={m.key}>
+                        {m.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {filterMode === 'range' && (
+                <div className="flex items-center gap-1.5 text-xs">
+                  <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1">
+                    <span className="text-[11px] text-slate-400">Dari:</span>
+                    <input
+                      type="date"
+                      value={dateFrom}
+                      onChange={(e) => setDateFrom(e.target.value)}
+                      className="bg-transparent text-xs text-slate-700 focus:outline-hidden cursor-pointer"
+                    />
+                  </div>
+                  <span className="text-slate-400">—</span>
+                  <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1">
+                    <span className="text-[11px] text-slate-400">Sampai:</span>
+                    <input
+                      type="date"
+                      value={dateTo}
+                      onChange={(e) => setDateTo(e.target.value)}
+                      className="bg-transparent text-xs text-slate-700 focus:outline-hidden cursor-pointer"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Bulan Pelaksanaan Display / Edit */}
+              <div className="flex items-center gap-1.5 bg-emerald-50/70 border border-emerald-200/80 rounded-lg px-3 py-1 text-xs">
+                <span className="text-emerald-900 font-semibold">Bulan Pelaksanaan:</span>
+                {isEditingBulan ? (
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="text"
+                      value={customBulanPelaksanaan || autoBulanPelaksanaan}
+                      onChange={(e) => setCustomBulanPelaksanaan(e.target.value)}
+                      placeholder="e.g. Oktober 2026"
+                      className="text-xs px-2 py-0.5 rounded bg-white border border-emerald-300 text-slate-800 focus:outline-hidden focus:ring-1 focus:ring-emerald-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingBulan(false)}
+                      className="text-[10px] bg-emerald-600 text-white px-2 py-0.5 rounded font-medium cursor-pointer"
+                    >
+                      OK
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5">
+                    <strong className="text-emerald-800">{currentBulanPelaksanaan}</strong>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCustomBulanPelaksanaan(currentBulanPelaksanaan);
+                        setIsEditingBulan(true);
+                      }}
+                      className="text-emerald-700 hover:text-emerald-900 p-0.5 cursor-pointer"
+                      title="Edit teks Bulan Pelaksanaan"
+                    >
+                      <Edit3 className="w-3 h-3" />
+                    </button>
+                    {customBulanPelaksanaan && (
+                      <button
+                        type="button"
+                        onClick={() => setCustomBulanPelaksanaan('')}
+                        className="text-[10px] text-slate-400 hover:text-slate-600 hover:underline cursor-pointer ml-1"
+                        title="Kembalikan ke otomatis"
+                      >
+                        (reset auto)
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Task Selection Bar (Hidden on print) */}
-        <div className="no-print px-6 py-2.5 bg-slate-100/60 border-b border-slate-200 flex items-center justify-between text-xs text-slate-600">
+        <div className="no-print px-6 py-2 bg-slate-100/60 border-b border-slate-200 flex items-center justify-between text-xs text-slate-600">
           <div className="flex items-center gap-3">
             <span className="font-semibold text-slate-700">Tugas yang disertakan:</span>
-            <span>{selectedTasks.length} dari {tasks.length} tugas terpilih</span>
+            <span>
+              <strong className="text-emerald-700 font-bold">{selectedTasks.length}</strong> dari{' '}
+              {tasks.length} total tugas
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => handleSelectAll(true)}
-              className="text-emerald-700 hover:underline font-medium"
+              className="text-emerald-700 hover:underline font-medium cursor-pointer"
             >
               Pilih Semua
             </button>
             <span>•</span>
             <button
               onClick={() => handleSelectAll(false)}
-              className="text-slate-500 hover:underline"
+              className="text-slate-500 hover:underline cursor-pointer"
             >
               Batal Semua
             </button>
@@ -224,7 +500,7 @@ export default function ReportModal({
               <div className="flex">
                 <span className="w-64">Bulan Pelaksanaan</span>
                 <span className="w-4">:</span>
-                <span className="font-semibold">{profile.bulanPelaksanaan}</span>
+                <span className="font-semibold">{currentBulanPelaksanaan}</span>
               </div>
             </div>
 

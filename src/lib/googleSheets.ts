@@ -1,6 +1,6 @@
 import { google } from 'googleapis';
 import { Task, GoogleSettings } from '@/types';
-import { formatDateToSpreadsheet } from '@/lib/dateUtils';
+import { formatDateToSpreadsheet, getBulanFromDate } from '@/lib/dateUtils';
 
 function getSheetsClient(settings: GoogleSettings) {
   if (!settings.serviceAccountEmail || !settings.privateKey) {
@@ -40,6 +40,8 @@ export function formatTaskForSheetRow(task: Task, rowNumber?: number): (string |
 }
 
 export async function appendTaskToSpreadsheet(task: Task, settings: GoogleSettings) {
+  const targetSheet = getBulanFromDate(task.tanggal) || settings.sheetName || 'Oktober';
+
   // If Apps Script Web App is used (Bypass GCP Org Policy)
   if (settings.syncMethod === 'apps_script' || (settings.webAppUrl && !settings.serviceAccountEmail)) {
     if (!settings.webAppUrl) {
@@ -47,6 +49,8 @@ export async function appendTaskToSpreadsheet(task: Task, settings: GoogleSettin
     }
 
     const payload = {
+      sheetName: targetSheet,
+      bulan: targetSheet,
       no: task.no,
       tanggal: task.tanggal,
       tanggalFormatted: formatDateToSpreadsheet(task.tanggal),
@@ -80,7 +84,7 @@ export async function appendTaskToSpreadsheet(task: Task, settings: GoogleSettin
   // Otherwise, use GCP Service Account
   const sheets = getSheetsClient(settings);
   const rowData = formatTaskForSheetRow(task);
-  const range = `${settings.sheetName || 'Sheet1'}!A:J`;
+  const range = `'${targetSheet}'!A:J`;
 
   const response = await sheets.spreadsheets.values.append({
     spreadsheetId: settings.spreadsheetId,
@@ -105,6 +109,8 @@ export async function appendMultipleTasks(tasks: Task[], settings: GoogleSetting
     }
 
     const payload = tasks.map(t => ({
+      sheetName: getBulanFromDate(t.tanggal) || 'Oktober',
+      bulan: getBulanFromDate(t.tanggal) || 'Oktober',
       no: t.no,
       tanggal: t.tanggal,
       tanggalFormatted: formatDateToSpreadsheet(t.tanggal),
@@ -134,22 +140,33 @@ export async function appendMultipleTasks(tasks: Task[], settings: GoogleSetting
     return await res.json().catch(() => ({ success: true, count: tasks.length }));
   }
 
-  // Otherwise, use GCP Service Account
+  // Otherwise, use GCP Service Account: group by month sheet
   const sheets = getSheetsClient(settings);
-  const rows = tasks.map((t, idx) => formatTaskForSheetRow(t, t.no || idx + 1));
-  const range = `${settings.sheetName || 'Sheet1'}!A:J`;
+  const tasksByMonth = new Map<string, Task[]>();
+  for (const t of tasks) {
+    const m = getBulanFromDate(t.tanggal) || 'Oktober';
+    if (!tasksByMonth.has(m)) tasksByMonth.set(m, []);
+    tasksByMonth.get(m)!.push(t);
+  }
 
-  const response = await sheets.spreadsheets.values.append({
-    spreadsheetId: settings.spreadsheetId,
-    range,
-    valueInputOption: 'USER_ENTERED',
-    insertDataOption: 'INSERT_ROWS',
-    requestBody: {
-      values: rows,
-    },
-  });
+  let totalUpdated = 0;
+  for (const [monthName, monthTasks] of tasksByMonth.entries()) {
+    const rows = monthTasks.map((t, idx) => formatTaskForSheetRow(t, t.no || idx + 1));
+    const range = `'${monthName}'!A:J`;
 
-  return response.data;
+    const res = await sheets.spreadsheets.values.append({
+      spreadsheetId: settings.spreadsheetId,
+      range,
+      valueInputOption: 'USER_ENTERED',
+      insertDataOption: 'INSERT_ROWS',
+      requestBody: {
+        values: rows,
+      },
+    });
+    totalUpdated += res.data.updates?.updatedRows || monthTasks.length;
+  }
+
+  return { updatedRows: totalUpdated };
 }
 
 export async function testGoogleSheetsConnection(settings: GoogleSettings) {

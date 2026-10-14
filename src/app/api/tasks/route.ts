@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getTasks, saveTasks, getSettings } from '@/lib/storage';
 import { appendTaskToSpreadsheet } from '@/lib/googleSheets';
-import { getHariFromDate } from '@/lib/dateUtils';
+import { getHariFromDate, getCurrentTimeString } from '@/lib/dateUtils';
 import { Task } from '@/types';
 
 export async function GET() {
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
       no: nextNo,
       tanggal,
       hari,
-      waktu: body.waktu || '08:00 - 16:30',
+      waktu: body.waktu || getCurrentTimeString(),
       tugas: body.tugas || '',
       user: body.user || 'Staf IT',
       tempat: body.tempat || settings.profile.defaultTempat || 'Ruang IT / Server',

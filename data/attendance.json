@@ -12,5 +12,13 @@
     "jamMasuk": "07:50",
     "jamPulang": "16:30",
     "keterangan": "Hadir di Ruang IT / Server"
+  },
+  {
+    "tanggal": "2026-10-13",
+    "status": "Hadir",
+    "jamMasuk": "07:45",
+    "jamPulang": "16:30",
+    "keterangan": "Presensi Hadir di Yayasan Kesehatan Pertamina",
+    "createdAt": "2026-10-13T00:51:45.174Z"
   }
 ]

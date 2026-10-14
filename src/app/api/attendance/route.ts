@@ -41,47 +41,7 @@ export async function POST(request: Request) {
     }
     saveAttendance(records);
 
-    // If user marked as Hadir, ensure there is an 'Absensi' task for today
-    if (status === 'Hadir') {
-      const tasks = getTasks();
-      const hasAbsenTask = tasks.some(
-        t => t.tanggal === tanggal && t.tugas.toLowerCase().includes('absensi')
-      );
 
-      if (!hasAbsenTask) {
-        const settings = getSettings();
-        const nextNo = tasks.length > 0 ? Math.max(...tasks.map(t => t.no || 0)) + 1 : 1;
-        const absenTask: Task = {
-          id: Date.now().toString(),
-          no: nextNo,
-          tanggal,
-          hari: getHariFromDate(tanggal),
-          waktu: `${jamMasuk} - 08:00`,
-          tugas: `Absensi kehadiran harian dan briefing pagi PKL`,
-          user: 'Staf IT',
-          tempat: settings.profile.defaultTempat || 'Ruang IT / Server',
-          kendala: '-',
-          tindakan: 'Absensi tepat waktu',
-          status: 'Selesai',
-          catatan: `Hadir pukul ${jamMasuk}`,
-          isSyncedToSheet: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
-
-        if (settings.google.isConfigured) {
-          try {
-            await appendTaskToSpreadsheet(absenTask, settings.google);
-            absenTask.isSyncedToSheet = true;
-          } catch (e) {
-            console.error('Failed to sync attendance task to sheet:', e);
-          }
-        }
-
-        tasks.push(absenTask);
-        saveTasks(tasks);
-      }
-    }
 
     return NextResponse.json({
       success: true,

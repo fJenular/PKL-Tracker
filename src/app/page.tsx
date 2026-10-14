@@ -1,10 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import Navbar from '@/components/Navbar';
 import BentoDashboard from '@/components/BentoDashboard';
-import TaskList from '@/components/TaskList';
-import TaskFormModal from '@/components/TaskFormModal';
+import TextLoop from '@/components/TextLoop';
+import FloatingActionMenu from '@/components/FloatingActionMenu';
 import ReportModal from '@/components/ReportModal';
 import SettingsModal from '@/components/SettingsModal';
 import GoogleGuideModal from '@/components/GoogleGuideModal';
@@ -17,16 +16,9 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
 
   // Modals state
-  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
-
-  // Selected task for editing
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
-
-  // Multi-select for tasks
-  const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
 
   // Synchronization status
   const [isSyncing, setIsSyncing] = useState(false);
@@ -59,82 +51,14 @@ export default function Home() {
     fetchData();
   }, [fetchData]);
 
-  // Save new or edited task
-  const handleSaveTask = async (taskData: Partial<Task>) => {
-    try {
-      if (editingTask) {
-        const res = await fetch(`/api/tasks/${editingTask.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(taskData)
-        });
-        const data = await res.json();
-        if (data.success) {
-          setTasks((prev) => prev.map((t) => (t.id === editingTask.id ? data.data : t)));
-          showNotification('Tugas berhasil diperbarui!', 'success');
-        } else {
-          throw new Error(data.message);
-        }
-      } else {
-        const res = await fetch('/api/tasks', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(taskData)
-        });
-        const data = await res.json();
-        if (data.success) {
-          setTasks((prev) => [...prev, data.data]);
-          showNotification(data.message || 'Tugas berhasil ditambahkan!', 'success');
-        } else {
-          throw new Error(data.message);
-        }
-      }
-      setEditingTask(null);
-    } catch (err: any) {
-      showNotification(err.message || 'Gagal menyimpan tugas', 'error');
-      throw err;
-    }
-  };
-
-  // Delete task
-  const handleDeleteTask = async (id: string) => {
-    if (!confirm('Apakah Anda yakin ingin menghapus tugas ini?')) return;
-    try {
-      const res = await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (data.success) {
-        setTasks((prev) => prev.filter((t) => t.id !== id));
-        setSelectedTaskIds((prev) => prev.filter((tid) => tid !== id));
-        showNotification('Tugas berhasil dihapus.', 'info');
-      } else {
-        throw new Error(data.message);
-      }
-    } catch (err: any) {
-      showNotification(err.message || 'Gagal menghapus tugas', 'error');
-    }
-  };
-
-  // Toggle selection
-  const handleToggleSelect = (id: string) => {
-    if (selectedTaskIds.includes(id)) {
-      setSelectedTaskIds(selectedTaskIds.filter((i) => i !== id));
-    } else {
-      setSelectedTaskIds([...selectedTaskIds, id]);
-    }
-  };
-
-  const handleSelectAll = (all: boolean) => {
-    setSelectedTaskIds(all ? tasks.map((t) => t.id) : []);
-  };
-
   // Sync to Google Sheets
-  const handleSyncToGoogle = async (taskIds?: string[]) => {
+  const handleSyncToGoogle = async () => {
     try {
       setIsSyncing(true);
       const res = await fetch('/api/google/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ taskIds })
+        body: JSON.stringify({})
       });
       const data = await res.json();
       if (data.success) {
@@ -175,24 +99,36 @@ export default function Home() {
   const unsyncedCount = tasks.filter((t) => !t.isSyncedToSheet).length;
 
   return (
-    <div className="min-h-screen bg-[#f2f3f7] pb-24">
-      {/* Navbar */}
-      <Navbar
-        settings={settings}
-        unsyncedCount={unsyncedCount}
-        onOpenNewTask={() => {
-          setEditingTask(null);
-          setIsTaskModalOpen(true);
-        }}
-        onOpenReport={() => setIsReportModalOpen(true)}
-        onOpenSettings={() => setIsSettingsModalOpen(true)}
-        onOpenGuide={() => setIsGuideModalOpen(true)}
-        onSyncAll={() => handleSyncToGoogle()}
-        isSyncing={isSyncing}
-      />
+    <div className="min-h-screen bg-[#edf0f5] relative overflow-hidden pb-24 pt-4 sm:pt-6">
+      {/* Background Ambient Mesh Orbs (Matching Image 1 Aesthetic) */}
+      <div className="absolute -top-[15%] -left-[10%] w-[55vw] h-[55vw] rounded-full bg-gradient-to-br from-[#d4f2a7]/50 via-[#c4f7b5]/30 to-transparent blur-[120px] pointer-events-none" />
+      <div className="absolute top-[20%] -right-[15%] w-[55vw] h-[55vw] rounded-full bg-gradient-to-bl from-[#b9dcfe]/50 via-[#c3d1ff]/35 to-transparent blur-[130px] pointer-events-none" />
+      <div className="absolute -bottom-[10%] left-[25%] w-[45vw] h-[45vw] rounded-full bg-gradient-to-tr from-[#fed7aa]/25 via-[#ffedd5]/20 to-transparent blur-[100px] pointer-events-none" />
+
+      {/* ===== FULL EDGE-TO-EDGE TEXTLOOP RIBBON (MEMBENTANG PENUH KIRI KE KANAN LAYAR TANPA TERPOTONG) ===== */}
+      {/* <div className="w-full overflow-hidden select-none mb-2 sm:mb-3 relative -mt-10">
+        <TextLoop
+          text="Task Tracker"
+          shape="line"
+          speed={40}
+          direction="forward"
+          separator="✦"
+          curviness={90}
+          fontSize={15}
+          fontWeight={600}
+          letterSpacing={2}
+          uppercase
+          color="#ffffff"
+          ribbon
+          ribbonColor="#5227FF"
+          ribbonWidth={35}
+          pauseOnHover
+          className="w-full"
+        />
+      </div> */}
 
       {/* Main Container */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+      <main className="min-h-screen flex flex-col justify-center max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Notification Toast */}
         {notification && (
           <div className="mb-5 p-4 rounded-2xl bg-white text-xs font-medium flex items-center justify-between bento-card border border-black/[0.04]">
@@ -202,70 +138,41 @@ export default function Home() {
               {notification.type === 'info' && <Info className="w-4 h-4 text-sky-600 shrink-0" />}
               <span>{notification.message}</span>
             </div>
-            <button onClick={() => setNotification(null)} className="text-[#a1a1aa] hover:text-[#14151a] ml-4 text-lg leading-none">×</button>
+            <button 
+              onClick={() => setNotification(null)} 
+              className="text-[#a1a1aa] hover:text-[#14151a] ml-4 text-lg leading-none cursor-pointer"
+            >
+              ×
+            </button>
           </div>
         )}
 
         {/* ===== BENTO DASHBOARD ===== */}
+        {/* Row 1: Profile & Tempat PKL */}
+        {/* Row 2: 2 Kartu (Tugas Harian & Absensi Harian) */}
         <BentoDashboard
           tasks={tasks}
           settings={settings}
-          onOpenNewTask={() => {
-            setEditingTask(null);
-            setIsTaskModalOpen(true);
-          }}
-          onOpenReport={() => setIsReportModalOpen(true)}
-          onOpenSettings={() => setIsSettingsModalOpen(true)}
           onTaskUpdated={fetchData}
-        />
-
-        {/* ===== SECTION LABEL ===== */}
-        <div className="flex items-center justify-between mb-4 px-2">
-          <div className="flex items-center gap-2.5">
-            <h3 className="text-sm font-bold text-[#14151a] tracking-tight">
-              Semua Catatan Tugas
-            </h3>
-            <span className="text-[11px] font-semibold bg-white text-[#71717a] px-2.5 py-0.5 rounded-full border border-black/[0.04] shadow-2xs">
-              {tasks.length} Total
-            </span>
-          </div>
-        </div>
-
-        {/* ===== TASK LIST TABLE ===== */}
-        <TaskList
-          tasks={tasks}
-          selectedTaskIds={selectedTaskIds}
-          onToggleSelect={handleToggleSelect}
-          onSelectAll={handleSelectAll}
-          onEditTask={(task) => {
-            setEditingTask(task);
-            setIsTaskModalOpen(true);
-          }}
-          onDeleteTask={handleDeleteTask}
-          onExportSelected={() => setIsReportModalOpen(true)}
-          onSyncSelected={() => handleSyncToGoogle(selectedTaskIds)}
-          isSyncing={isSyncing}
         />
       </main>
 
-      {/* ===== MODALS ===== */}
-      <TaskFormModal
-        isOpen={isTaskModalOpen}
-        onClose={() => {
-          setIsTaskModalOpen(false);
-          setEditingTask(null);
-        }}
-        onSave={handleSaveTask}
-        initialTask={editingTask}
-        settings={settings}
+      {/* ===== FLOATING ACTION BURGER MENU (Bottom Right) ===== */}
+      <FloatingActionMenu
+        onOpenSettings={() => setIsSettingsModalOpen(true)}
+        onOpenGuide={() => setIsGuideModalOpen(true)}
+        onOpenReport={() => setIsReportModalOpen(true)}
+        onSyncAll={handleSyncToGoogle}
+        isSyncing={isSyncing}
+        unsyncedCount={unsyncedCount}
       />
 
+      {/* ===== MODALS ===== */}
       <ReportModal
         isOpen={isReportModalOpen}
         onClose={() => setIsReportModalOpen(false)}
         tasks={tasks}
         settings={settings}
-        initialSelectedIds={selectedTaskIds}
       />
 
       <SettingsModal
@@ -285,6 +192,28 @@ export default function Home() {
         serviceAccountEmail={settings?.google.serviceAccountEmail}
         spreadsheetId={settings?.google.spreadsheetId}
       />
+
+      {/* <div className="w-full absolute inset-x-0 bottom-0">
+        <TextLoop
+          text="Task Tracker"
+          shape="line"
+          speed={40}
+          direction="forward"
+          separator="✦"
+          curviness={90}
+          fontSize={15}
+          fontWeight={600}
+          letterSpacing={2}
+          uppercase
+          color="#ffffff"
+          ribbon
+          ribbonColor="#5227FF"
+          ribbonWidth={35}
+          pauseOnHover
+          className="w-full"
+        />
+      </div> */}
+
     </div>
   );
 }

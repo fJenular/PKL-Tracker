@@ -22,7 +22,9 @@ export default function TaskFormModal({
 }: TaskFormModalProps) {
   const [tanggal, setTanggal] = useState('');
   const [hari, setHari] = useState('');
-  const [waktu, setWaktu] = useState('08:00 - 16:30');
+  const [jamMulai, setJamMulai] = useState('');
+  const [jamSelesai, setJamSelesai] = useState('');
+  const [isRange, setIsRange] = useState(false);
   const [tugas, setTugas] = useState('');
   const [user, setUser] = useState('Staf IT');
   const [tempat, setTempat] = useState(settings?.profile.defaultTempat || 'Ruang IT / Server');
@@ -37,7 +39,17 @@ export default function TaskFormModal({
     if (initialTask) {
       setTanggal(initialTask.tanggal);
       setHari(initialTask.hari);
-      setWaktu(initialTask.waktu);
+      const w = initialTask.waktu || '';
+      if (w.includes(' - ')) {
+        const [start, end] = w.split(' - ');
+        setJamMulai(start.trim().slice(0, 5));
+        setJamSelesai(end.trim().slice(0, 5));
+        setIsRange(true);
+      } else {
+        setJamMulai(w.length >= 5 ? w.slice(0, 5) : w || getCurrentTimeString());
+        setJamSelesai('');
+        setIsRange(false);
+      }
       setTugas(initialTask.tugas);
       setUser(initialTask.user);
       setTempat(initialTask.tempat || settings?.profile.defaultTempat || 'Ruang IT / Server');
@@ -49,7 +61,9 @@ export default function TaskFormModal({
       const today = getCurrentDateString();
       setTanggal(today);
       setHari(getHariFromDate(today));
-      setWaktu('08:00 - 16:30');
+      setJamMulai(getCurrentTimeString());
+      setJamSelesai('');
+      setIsRange(false);
       setTugas('');
       setUser('Staf IT');
       setTempat(settings?.profile.defaultTempat || 'Ruang IT / Server');
@@ -79,10 +93,11 @@ export default function TaskFormModal({
     try {
       setIsSubmitting(true);
       setErrorMsg('');
+      const finalWaktu = isRange && jamSelesai ? `${jamMulai} - ${jamSelesai}` : (jamMulai || getCurrentTimeString());
       await onSave({
         tanggal,
         hari,
-        waktu,
+        waktu: finalWaktu,
         tugas: tugas.trim(),
         user: user.trim() || 'Staf IT',
         tempat: tempat.trim() || 'Ruang IT / Server',
@@ -122,7 +137,7 @@ export default function TaskFormModal({
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -149,7 +164,7 @@ export default function TaskFormModal({
                   value={tanggal}
                   onChange={handleDateChange}
                   required
-                  className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
+                  className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-hidden cursor-pointer"
                 />
               </div>
             </div>
@@ -168,16 +183,67 @@ export default function TaskFormModal({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Waktu Pelaksanaan
-              </label>
-              <input
-                type="text"
-                value={waktu}
-                onChange={(e) => setWaktu(e.target.value)}
-                placeholder="Contoh: 08:00 - 16:30"
-                className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
-              />
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5 text-emerald-600" />
+                  Jam Pelaksanaan
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setIsRange(!isRange)}
+                  className="text-[10px] text-emerald-600 hover:text-emerald-700 font-medium transition-colors cursor-pointer hover:underline"
+                >
+                  {isRange ? 'Jam Tunggal' : '+ Rentang'}
+                </button>
+              </div>
+
+              {!isRange ? (
+                <div className="flex items-center gap-1.5">
+                  <div className="relative flex-1">
+                    <input
+                      type="time"
+                      value={jamMulai}
+                      onChange={(e) => setJamMulai(e.target.value)}
+                      required
+                      className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-hidden bg-white font-mono cursor-pointer"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setJamMulai(getCurrentTimeString())}
+                    title="Gunakan jam sekarang secara otomatis"
+                    className="px-2.5 py-2 text-[11px] font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-colors flex items-center gap-1 shrink-0 cursor-pointer shadow-2xs"
+                  >
+                    <span>Otomatis</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1">
+                  <input
+                    type="time"
+                    value={jamMulai}
+                    onChange={(e) => setJamMulai(e.target.value)}
+                    required
+                    className="w-full text-xs px-2 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-hidden bg-white font-mono cursor-pointer"
+                  />
+                  <span className="text-xs text-slate-400 font-semibold">-</span>
+                  <input
+                    type="time"
+                    value={jamSelesai}
+                    onChange={(e) => setJamSelesai(e.target.value)}
+                    required
+                    className="w-full text-xs px-2 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-hidden bg-white font-mono cursor-pointer"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setJamMulai(getCurrentTimeString())}
+                    title="Set jam mulai ke waktu sekarang"
+                    className="p-2 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-colors shrink-0 cursor-pointer"
+                  >
+                    <Clock className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 

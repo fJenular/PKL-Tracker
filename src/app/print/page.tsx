@@ -15,6 +15,7 @@ function PrintContent() {
 
   const idsParam = searchParams.get('ids');
   const groupedParam = searchParams.get('grouped') !== 'false';
+  const bulanParam = searchParams.get('bulan');
 
   useEffect(() => {
     async function loadData() {
@@ -146,7 +147,7 @@ function PrintContent() {
           <div className="flex">
             <span className="w-64">Bulan Pelaksanaan</span>
             <span className="w-4">:</span>
-            <span className="font-semibold">{profile.bulanPelaksanaan}</span>
+            <span className="font-semibold">{bulanParam || profile.bulanPelaksanaan}</span>
           </div>
         </div>
 
