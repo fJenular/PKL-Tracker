@@ -1,24 +1,461 @@
 [
   {
-    "tanggal": "2026-10-01",
+    "tanggal": "2026-10-15",
     "status": "Hadir",
-    "jamMasuk": "07:45",
-    "jamPulang": "16:30",
-    "keterangan": "Tepat waktu di Ruang IT"
+    "jamMasuk": "07:44",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20261015_074412_29.jpg",
+    "createdAt": "2026-10-15T07:44:12Z"
   },
   {
-    "tanggal": "2026-10-12",
+    "tanggal": "2026-10-14",
     "status": "Hadir",
-    "jamMasuk": "07:50",
-    "jamPulang": "16:30",
-    "keterangan": "Hadir di Ruang IT / Server"
+    "jamMasuk": "07:22",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20261014_072234_29.jpg",
+    "createdAt": "2026-10-14T07:22:34Z"
   },
   {
     "tanggal": "2026-10-13",
     "status": "Hadir",
-    "jamMasuk": "07:45",
+    "jamMasuk": "07:13",
     "jamPulang": "16:30",
-    "keterangan": "Presensi Hadir di Yayasan Kesehatan Pertamina",
-    "createdAt": "2026-10-13T00:51:45.174Z"
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20261013_071352_29.jpg",
+    "createdAt": "2026-10-13T07:13:52Z"
+  },
+  {
+    "tanggal": "2026-10-12",
+    "status": "Hadir",
+    "jamMasuk": "07:12",
+    "jamPulang": "16:30",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20261012_071255_29.jpg",
+    "createdAt": "2026-10-12T07:12:55Z"
+  },
+  {
+    "tanggal": "2026-10-09",
+    "status": "Hadir",
+    "jamMasuk": "07:08",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20261009_070803_29.jpg",
+    "createdAt": "2026-10-09T07:08:03Z"
+  },
+  {
+    "tanggal": "2026-10-08",
+    "status": "Hadir",
+    "jamMasuk": "07:14",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20261008_071405_29.jpg",
+    "createdAt": "2026-10-08T07:14:05Z"
+  },
+  {
+    "tanggal": "2026-10-07",
+    "status": "Hadir",
+    "jamMasuk": "07:14",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20261007_071416_29.jpg",
+    "createdAt": "2026-10-07T07:14:16Z"
+  },
+  {
+    "tanggal": "2026-10-06",
+    "status": "Hadir",
+    "jamMasuk": "07:18",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20261006_071825_29.jpg",
+    "createdAt": "2026-10-06T07:18:25Z"
+  },
+  {
+    "tanggal": "2026-10-05",
+    "status": "Hadir",
+    "jamMasuk": "07:10",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20261005_071052_29.jpg",
+    "createdAt": "2026-10-05T07:10:52Z"
+  },
+  {
+    "tanggal": "2026-10-02",
+    "status": "Hadir",
+    "jamMasuk": "07:10",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20261002_071057_29.jpg",
+    "createdAt": "2026-10-02T07:10:57Z"
+  },
+  {
+    "tanggal": "2026-10-01",
+    "status": "Hadir",
+    "jamMasuk": "07:01",
+    "jamPulang": "16:30",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20261001_070142_29.jpg",
+    "createdAt": "2026-10-01T07:01:42Z"
+  },
+  {
+    "tanggal": "2026-09-30",
+    "status": "Hadir",
+    "jamMasuk": "07:03",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20260930_070316_29.jpg",
+    "createdAt": "2026-09-30T07:03:16Z"
+  },
+  {
+    "tanggal": "2026-09-29",
+    "status": "Hadir",
+    "jamMasuk": "07:11",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20260929_071156_29.jpg",
+    "createdAt": "2026-09-29T07:11:56Z"
+  },
+  {
+    "tanggal": "2026-09-28",
+    "status": "Hadir",
+    "jamMasuk": "07:03",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20260928_070310_29.jpg",
+    "createdAt": "2026-09-28T07:03:10Z"
+  },
+  {
+    "tanggal": "2026-09-25",
+    "status": "Hadir",
+    "jamMasuk": "07:11",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20260925_071129_29.jpg",
+    "createdAt": "2026-09-25T07:11:29Z"
+  },
+  {
+    "tanggal": "2026-09-24",
+    "status": "Hadir",
+    "jamMasuk": "07:08",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20260924_070850_29.jpg",
+    "createdAt": "2026-09-24T07:08:50Z"
+  },
+  {
+    "tanggal": "2026-09-22",
+    "status": "Hadir",
+    "jamMasuk": "07:07",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20260922_070716_29.jpg",
+    "createdAt": "2026-09-22T07:07:16Z"
+  },
+  {
+    "tanggal": "2026-09-21",
+    "status": "Hadir",
+    "jamMasuk": "07:06",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20260921_070630_29.jpg",
+    "createdAt": "2026-09-21T07:06:30Z"
+  },
+  {
+    "tanggal": "2026-09-18",
+    "status": "Hadir",
+    "jamMasuk": "07:12",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20260918_071213_29.jpg",
+    "createdAt": "2026-09-18T07:12:13Z"
+  },
+  {
+    "tanggal": "2026-09-17",
+    "status": "Hadir",
+    "jamMasuk": "07:02",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20260917_070218_29.jpg",
+    "createdAt": "2026-09-17T07:02:18Z"
+  },
+  {
+    "tanggal": "2026-09-16",
+    "status": "Hadir",
+    "jamMasuk": "07:10",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20260916_071023_29.jpg",
+    "createdAt": "2026-09-16T07:10:23Z"
+  },
+  {
+    "tanggal": "2026-09-15",
+    "status": "Hadir",
+    "jamMasuk": "06:55",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20260915_065504_29.jpg",
+    "createdAt": "2026-09-15T06:55:04Z"
+  },
+  {
+    "tanggal": "2026-09-14",
+    "status": "Hadir",
+    "jamMasuk": "06:56",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20260914_065607_29.jpg",
+    "createdAt": "2026-09-14T06:56:07Z"
+  },
+  {
+    "tanggal": "2026-09-11",
+    "status": "Hadir",
+    "jamMasuk": "07:08",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20260911_070820_29.jpg",
+    "createdAt": "2026-09-11T07:08:20Z"
+  },
+  {
+    "tanggal": "2026-09-10",
+    "status": "Hadir",
+    "jamMasuk": "07:06",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20260910_070658_29.jpg",
+    "createdAt": "2026-09-10T07:06:58Z"
+  },
+  {
+    "tanggal": "2026-09-09",
+    "status": "Hadir",
+    "jamMasuk": "07:09",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20260909_070904_29.jpg",
+    "createdAt": "2026-09-09T07:09:04Z"
+  },
+  {
+    "tanggal": "2026-09-08",
+    "status": "Hadir",
+    "jamMasuk": "07:49",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20260908_074919_29.jpg",
+    "createdAt": "2026-09-08T07:49:19Z"
+  },
+  {
+    "tanggal": "2026-09-07",
+    "status": "Hadir",
+    "jamMasuk": "07:04",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20260907_070438_29.jpg",
+    "createdAt": "2026-09-07T07:04:38Z"
+  },
+  {
+    "tanggal": "2026-09-04",
+    "status": "Hadir",
+    "jamMasuk": "07:57",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20260904_075711_29.jpg",
+    "createdAt": "2026-09-04T07:57:11Z"
+  },
+  {
+    "tanggal": "2026-09-03",
+    "status": "Hadir",
+    "jamMasuk": "07:07",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20260903_070748_29.jpg",
+    "createdAt": "2026-09-03T07:07:48Z"
+  },
+  {
+    "tanggal": "2026-09-02",
+    "status": "Hadir",
+    "jamMasuk": "07:01",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20260902_070157_29.jpg",
+    "createdAt": "2026-09-02T07:01:57Z"
+  },
+  {
+    "tanggal": "2026-09-01",
+    "status": "Hadir",
+    "jamMasuk": "07:01",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20260901_070149_29.jpg",
+    "createdAt": "2026-09-01T07:01:49Z"
+  },
+  {
+    "tanggal": "2026-08-31",
+    "status": "Hadir",
+    "jamMasuk": "06:53",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20260831_065331_29.jpg",
+    "createdAt": "2026-08-31T06:53:31Z"
+  },
+  {
+    "tanggal": "2026-08-28",
+    "status": "Hadir",
+    "jamMasuk": "07:23",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20260828_072336_29.jpg",
+    "createdAt": "2026-08-28T07:23:36Z"
+  },
+  {
+    "tanggal": "2026-08-27",
+    "status": "Hadir",
+    "jamMasuk": "10:55",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20260827_105533_29.jpg",
+    "createdAt": "2026-08-27T10:55:33Z"
+  },
+  {
+    "tanggal": "2026-08-26",
+    "status": "Hadir",
+    "jamMasuk": "07:03",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20260826_070355_29.jpg",
+    "createdAt": "2026-08-26T07:03:55Z"
+  },
+  {
+    "tanggal": "2026-08-24",
+    "status": "Hadir",
+    "jamMasuk": "07:09",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20260824_070927_29.jpg",
+    "createdAt": "2026-08-24T07:09:27Z"
+  },
+  {
+    "tanggal": "2026-08-21",
+    "status": "Hadir",
+    "jamMasuk": "07:07",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20260821_070714_29.jpg",
+    "createdAt": "2026-08-21T07:07:14Z"
+  },
+  {
+    "tanggal": "2026-08-20",
+    "status": "Hadir",
+    "jamMasuk": "06:48",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20260820_064842_29.jpg",
+    "createdAt": "2026-08-20T06:48:42Z"
+  },
+  {
+    "tanggal": "2026-08-19",
+    "status": "Hadir",
+    "jamMasuk": "07:02",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20260819_070220_29.jpg",
+    "createdAt": "2026-08-19T07:02:20Z"
+  },
+  {
+    "tanggal": "2026-08-18",
+    "status": "Hadir",
+    "jamMasuk": "07:03",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20260818_070324_29.jpg",
+    "createdAt": "2026-08-18T07:03:24Z"
+  },
+  {
+    "tanggal": "2026-08-14",
+    "status": "Hadir",
+    "jamMasuk": "06:58",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20260814_065853_29.jpg",
+    "createdAt": "2026-08-14T06:58:53Z"
+  },
+  {
+    "tanggal": "2026-08-13",
+    "status": "Hadir",
+    "jamMasuk": "06:55",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20260813_065505_29.jpg",
+    "createdAt": "2026-08-13T06:55:05Z"
+  },
+  {
+    "tanggal": "2026-08-12",
+    "status": "Hadir",
+    "jamMasuk": "06:58",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20260812_065815_29.jpg",
+    "createdAt": "2026-08-12T06:58:15Z"
+  },
+  {
+    "tanggal": "2026-08-11",
+    "status": "Hadir",
+    "jamMasuk": "06:54",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20260811_065435_29.jpg",
+    "createdAt": "2026-08-11T06:54:35Z"
+  },
+  {
+    "tanggal": "2026-08-10",
+    "status": "Hadir",
+    "jamMasuk": "06:45",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20260810_064503_29.jpg",
+    "createdAt": "2026-08-10T06:45:03Z"
+  },
+  {
+    "tanggal": "2026-08-07",
+    "status": "Hadir",
+    "jamMasuk": "06:52",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20260807_065219_29.jpg",
+    "createdAt": "2026-08-07T06:52:19Z"
+  },
+  {
+    "tanggal": "2026-08-06",
+    "status": "Hadir",
+    "jamMasuk": "06:46",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20260806_064638_29.jpg",
+    "createdAt": "2026-08-06T06:46:38Z"
+  },
+  {
+    "tanggal": "2026-08-05",
+    "status": "Hadir",
+    "jamMasuk": "06:48",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20260805_064844_29.jpg",
+    "createdAt": "2026-08-05T06:48:44Z"
+  },
+  {
+    "tanggal": "2026-08-04",
+    "status": "Hadir",
+    "jamMasuk": "07:25",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20260804_072514_29.jpg",
+    "createdAt": "2026-08-04T07:25:14Z"
+  },
+  {
+    "tanggal": "2026-08-03",
+    "status": "Hadir",
+    "jamMasuk": "07:08",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20260803_070832_29.jpg",
+    "createdAt": "2026-08-03T07:08:32Z"
   }
 ]

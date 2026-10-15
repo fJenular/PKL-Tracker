@@ -459,7 +459,7 @@ export default function ReportModal({
         <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-slate-100/40">
           <div 
             id="printable-document" 
-            className="print-page bg-white max-w-[210mm] mx-auto p-8 sm:p-12 shadow-md rounded-lg border border-slate-200 print:shadow-none print:border-none print:p-0 print:m-0"
+            className="print-page print-page-tugas bg-white max-w-[210mm] mx-auto p-8 sm:p-12 shadow-md rounded-lg border border-slate-200 print:shadow-none print:border-none"
             style={{ minHeight: '297mm', fontFamily: 'Calibri, sans-serif' }}
           >
             {/* Header / Kop Surat Image */}

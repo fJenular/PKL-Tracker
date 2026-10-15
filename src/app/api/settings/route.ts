@@ -10,6 +10,11 @@ export async function GET() {
         ...settings.google,
         privateKey: settings.google.privateKey ? '••••••••••••••••' : '',
         hasPrivateKey: !!settings.google.privateKey
+      },
+      smartpkl: {
+        ...settings.smartpkl,
+        password: settings.smartpkl?.password ? '••••••••' : '',
+        hasPassword: !!(settings.smartpkl?.password)
       }
     };
     return NextResponse.json({ success: true, data: safeSettings });
@@ -50,12 +55,27 @@ export async function POST(request: Request) {
       }
     }
 
+    // Handle SmartPKL settings
+    let smartpklConfig = { ...currentSettings.smartpkl };
+    if (body.smartpkl) {
+      smartpklConfig = {
+        ...currentSettings.smartpkl,
+        ...body.smartpkl,
+        // Only update password if it's not masked
+        password: (body.smartpkl.password && !body.smartpkl.password.includes('•'))
+          ? body.smartpkl.password
+          : currentSettings.smartpkl?.password || ''
+      };
+      smartpklConfig.isConfigured = !!(smartpklConfig.username && smartpklConfig.password);
+    }
+
     const newSettings = {
       profile: {
         ...currentSettings.profile,
         ...(body.profile || {})
       },
-      google: googleConfig
+      google: googleConfig,
+      smartpkl: smartpklConfig
     };
 
     saveSettings(newSettings);
@@ -69,6 +89,11 @@ export async function POST(request: Request) {
           ...newSettings.google,
           privateKey: newSettings.google.privateKey ? '••••••••••••••••' : '',
           hasPrivateKey: !!newSettings.google.privateKey
+        },
+        smartpkl: {
+          ...newSettings.smartpkl,
+          password: newSettings.smartpkl?.password ? '••••••••' : '',
+          hasPassword: !!(newSettings.smartpkl?.password)
         }
       }
     });

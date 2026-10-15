@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { 
@@ -25,7 +25,7 @@ import GoogleGuideModal from '@/components/GoogleGuideModal';
 import FloatingActionMenu from '@/components/FloatingActionMenu';
 import { Task, AppSettings } from '@/types';
 
-export default function TugasPage() {
+function TugasContent() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [loading, setLoading] = useState(true);
@@ -493,5 +493,19 @@ export default function TugasPage() {
         spreadsheetId={settings?.google.spreadsheetId}
       />
     </div>
+  );
+}
+
+export default function TugasPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#f2f3f7] flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900" />
+        </div>
+      }
+    >
+      <TugasContent />
+    </Suspense>
   );
 }

@@ -1,12 +1,25 @@
 import { NextResponse } from 'next/server';
-import { getAttendance, saveAttendance, getTasks, saveTasks, getSettings } from '@/lib/storage';
-import { appendTaskToSpreadsheet } from '@/lib/googleSheets';
-import { getHariFromDate } from '@/lib/dateUtils';
-import { AttendanceRecord, Task } from '@/types';
+import { getAttendance, saveAttendance } from '@/lib/storage';
+import { AttendanceRecord } from '@/types';
+import { syncSmartPKLAttendance } from '@/lib/smartpkl';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const records = getAttendance();
+    const url = new URL(request.url);
+    const forceSync = url.searchParams.get('sync') === '1';
+
+    let records = getAttendance();
+
+    // Auto-sync from SmartPKL if requested or if we have sparse/old data
+    const todayStr = new Date().toISOString().split('T')[0];
+    const hasTodayRecord = records.some((r) => r.tanggal === todayStr);
+    if (forceSync || !hasTodayRecord || records.length < 10) {
+      const syncResult = await syncSmartPKLAttendance();
+      if (syncResult.success) {
+        records = syncResult.data;
+      }
+    }
+
     return NextResponse.json({ success: true, data: records });
   } catch (error: any) {
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
@@ -25,28 +38,34 @@ export async function POST(request: Request) {
 
     // Find if already exists
     const existingIndex = records.findIndex(r => r.tanggal === tanggal);
-    const newRecord: AttendanceRecord = {
-      tanggal,
-      status,
-      jamMasuk,
-      jamPulang,
-      keterangan,
-      createdAt: new Date().toISOString()
-    };
-
+    
+    let targetRecord: AttendanceRecord;
     if (existingIndex >= 0) {
-      records[existingIndex] = newRecord;
+      targetRecord = {
+        ...records[existingIndex],
+        status: body.status !== undefined ? body.status : records[existingIndex].status,
+        jamMasuk: body.jamMasuk !== undefined ? body.jamMasuk : records[existingIndex].jamMasuk,
+        jamPulang: body.jamPulang !== undefined ? body.jamPulang : (records[existingIndex].jamPulang || ''),
+        keterangan: body.keterangan !== undefined ? body.keterangan : records[existingIndex].keterangan,
+      };
+      records[existingIndex] = targetRecord;
     } else {
-      records.push(newRecord);
+      targetRecord = {
+        tanggal,
+        status: body.status || 'Hadir',
+        jamMasuk: body.jamMasuk || '07:45',
+        jamPulang: body.jamPulang || '',
+        keterangan: body.keterangan || 'Presensi PKL Hari Ini',
+        createdAt: new Date().toISOString()
+      };
+      records.push(targetRecord);
     }
     saveAttendance(records);
 
-
-
     return NextResponse.json({
       success: true,
-      message: `Presensi tanggal ${tanggal} berhasil dicatat!`,
-      data: newRecord
+      message: `Presensi tanggal ${tanggal} berhasil disimpan!`,
+      data: targetRecord
     });
   } catch (error: any) {
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });

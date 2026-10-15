@@ -33,7 +33,7 @@ export default function SettingsModal({
   onSaveSettings,
   onOpenGuide
 }: SettingsModalProps) {
-  const [activeTab, setActiveTab] = useState<'profile' | 'google'>('google');
+  const [activeTab, setActiveTab] = useState<'profile' | 'google' | 'smartpkl'>('google');
 
   // Profile fields
   const [namaSiswa, setNamaSiswa] = useState('');
@@ -45,6 +45,9 @@ export default function SettingsModal({
   const [userDuDi, setUserDuDi] = useState('');
   const [pesertaPkl, setPesertaPkl] = useState('');
   const [defaultTempat, setDefaultTempat] = useState('');
+  const [managerIt, setManagerIt] = useState('');
+  const [periodePkl, setPeriodePkl] = useState('');
+  const [tanggalMulaiPkl, setTanggalMulaiPkl] = useState('');
 
   // Google fields
   const [syncMethod, setSyncMethod] = useState<'apps_script' | 'service_account'>('apps_script');
@@ -54,6 +57,14 @@ export default function SettingsModal({
   const [serviceAccountEmail, setServiceAccountEmail] = useState('');
   const [privateKey, setPrivateKey] = useState('');
   const [rawJson, setRawJson] = useState('');
+
+  // SmartPKL fields
+  const [smartpklUsername, setSmartpklUsername] = useState('');
+  const [smartpklPassword, setSmartpklPassword] = useState('');
+  const [officeLatitude, setOfficeLatitude] = useState('-6.2254');
+  const [officeLongitude, setOfficeLongitude] = useState('106.7977');
+  const [testingSmartPKL, setTestingSmartPKL] = useState(false);
+  const [smartpklTestResult, setSmartpklTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
   const [testingConnection, setTestingConnection] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
@@ -71,6 +82,9 @@ export default function SettingsModal({
       setUserDuDi(settings.profile.userDuDi || '(..................................)');
       setPesertaPkl(settings.profile.pesertaPkl || 'Fakhri Zainul Arifin');
       setDefaultTempat(settings.profile.defaultTempat || 'Ruang IT / Server');
+      setManagerIt(settings.profile.managerIt || 'Bagus Dwi Laksono');
+      setPeriodePkl(settings.profile.periodePkl || '2026-2027');
+      setTanggalMulaiPkl(settings.profile.tanggalMulaiPkl || '2026-08-03');
 
       setSyncMethod(settings.google.syncMethod || 'apps_script');
       setWebAppUrl(settings.google.webAppUrl || '');
@@ -78,6 +92,13 @@ export default function SettingsModal({
       setSheetName(settings.google.sheetName || 'Sheet1');
       setServiceAccountEmail(settings.google.serviceAccountEmail || '');
       setPrivateKey(settings.google.privateKey || '');
+
+      // SmartPKL
+      const sp = (settings as any).smartpkl;
+      setSmartpklUsername(sp?.username || '2324009');
+      setSmartpklPassword(sp?.password || '');
+      setOfficeLatitude(String(sp?.officeLatitude ?? '-6.2254'));
+      setOfficeLongitude(String(sp?.officeLongitude ?? '106.7977'));
     }
     setTestResult(null);
     setSaveStatus('');
@@ -165,7 +186,10 @@ export default function SettingsModal({
           pembimbingPkl,
           userDuDi,
           pesertaPkl,
-          defaultTempat
+          defaultTempat,
+          managerIt,
+          periodePkl,
+          tanggalMulaiPkl
         },
         google: {
           syncMethod,
@@ -174,6 +198,12 @@ export default function SettingsModal({
           sheetName,
           serviceAccountEmail,
           privateKey: privateKey.includes('••••') ? undefined : privateKey
+        },
+        smartpkl: {
+          username: smartpklUsername,
+          password: smartpklPassword.includes('••••') ? undefined : smartpklPassword,
+          officeLatitude: parseFloat(officeLatitude) || -6.2254,
+          officeLongitude: parseFloat(officeLongitude) || 106.7977,
         }
       });
       setSaveStatus('Pengaturan berhasil disimpan!');
@@ -239,6 +269,21 @@ export default function SettingsModal({
           >
             <User className="w-4 h-4" />
             <span>Profil Siswa & PKL</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('smartpkl')}
+            className={`flex items-center gap-2 py-3 px-4 text-xs font-semibold border-b-2 transition-colors ${
+              activeTab === 'smartpkl'
+                ? 'border-indigo-600 text-indigo-700 bg-white'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <ShieldAlert className="w-4 h-4" />
+            <span>SmartPKL Absensi</span>
+            {(settings as any)?.smartpkl?.isConfigured && (
+              <span className="w-2 h-2 rounded-full bg-indigo-500" />
+            )}
           </button>
         </div>
 
@@ -574,7 +619,184 @@ export default function SettingsModal({
                       className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
                     />
                   </div>
+
+                  {/* New fields for absensi report template */}
+                  <div className="pt-2 border-t border-slate-200">
+                    <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-3">
+                      Khusus Template Laporan Absensi
+                    </p>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs font-medium text-slate-600 mb-1">
+                          Manager IT (Penandatangan Kiri)
+                        </label>
+                        <input
+                          type="text"
+                          value={managerIt}
+                          onChange={(e) => setManagerIt(e.target.value)}
+                          placeholder="Bagus Dwi Laksono"
+                          className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-600 mb-1">
+                          Periode PKL (e.g. 2026-2027)
+                        </label>
+                        <input
+                          type="text"
+                          value={periodePkl}
+                          onChange={(e) => setPeriodePkl(e.target.value)}
+                          placeholder="2026-2027"
+                          className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-600 mb-1">
+                          Tanggal Masuk Pertama PKL (acuan Total Hari PKL)
+                        </label>
+                        <input
+                          type="date"
+                          value={tanggalMulaiPkl}
+                          onChange={(e) => setTanggalMulaiPkl(e.target.value)}
+                          className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
+                        />
+                        <p className="text-[11px] text-slate-400 mt-1">Default: 3 Agustus 2026</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: SmartPKL */}
+          {activeTab === 'smartpkl' && (
+            <div className="space-y-5">
+              {/* Header info */}
+              <div
+                className="p-4 rounded-xl text-xs"
+                style={{ background: 'linear-gradient(135deg, #eef2ff, #f5f3ff)', border: '1px solid #c7d2fe' }}
+              >
+                <div className="flex items-start gap-2.5">
+                  <ShieldAlert className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-bold text-indigo-900">Integrasi SmartPKL Otomatis</p>
+                    <p className="text-indigo-700 mt-0.5">
+                      Masukkan kredensial login ke{' '}
+                      <a href="https://smartpkl.smktibazma.sch.id" target="_blank" rel="noopener noreferrer" className="underline">
+                        smartpkl.smktibazma.sch.id
+                      </a>{' '}
+                      agar Task Tracker bisa absen otomatis ke web tersebut.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Credentials */}
+              <div>
+                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-3">Kredensial Login</h3>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Username SmartPKL</label>
+                    <input
+                      type="text"
+                      value={smartpklUsername}
+                      onChange={(e) => setSmartpklUsername(e.target.value)}
+                      placeholder="Contoh: 2324009"
+                      className="w-full text-xs px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Password SmartPKL</label>
+                    <input
+                      type="password"
+                      value={smartpklPassword}
+                      onChange={(e) => setSmartpklPassword(e.target.value)}
+                      placeholder="Masukkan password SmartPKL"
+                      className="w-full text-xs px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Office Location */}
+              <div>
+                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-1">Koordinat Kantor (DU/DI)</h3>
+                <p className="text-xs text-slate-500 mb-3">
+                  Titik tengah area kantor. Absensi akan menggunakan koordinat acak dalam radius ±55m dari titik ini.
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Latitude</label>
+                    <input
+                      type="text"
+                      value={officeLatitude}
+                      onChange={(e) => setOfficeLatitude(e.target.value)}
+                      placeholder="-6.2254"
+                      className="w-full text-xs px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-hidden font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Longitude</label>
+                    <input
+                      type="text"
+                      value={officeLongitude}
+                      onChange={(e) => setOfficeLongitude(e.target.value)}
+                      placeholder="106.7977"
+                      className="w-full text-xs px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-hidden font-mono"
+                    />
+                  </div>
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1.5">
+                  💡 Yayasan Kesehatan Pertamina Simprug: -6.2254, 106.7977
+                </p>
+              </div>
+
+              {/* Test Login Button */}
+              <div>
+                <button
+                  type="button"
+                  disabled={testingSmartPKL || !smartpklUsername}
+                  onClick={async () => {
+                    setTestingSmartPKL(true);
+                    setSmartpklTestResult(null);
+                    try {
+                      const fd = new FormData();
+                      fd.append('action', 'login');
+                      fd.append('username', smartpklUsername);
+                      fd.append('password', smartpklPassword.includes('••••') ? '' : smartpklPassword);
+                      const res = await fetch('/api/smartpkl', { method: 'POST', body: fd });
+                      const data = await res.json();
+                      setSmartpklTestResult({ success: data.success, message: data.message });
+                    } catch (err: any) {
+                      setSmartpklTestResult({ success: false, message: err.message });
+                    } finally {
+                      setTestingSmartPKL(false);
+                    }
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {testingSmartPKL ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Zap className="w-3.5 h-3.5" />
+                  )}
+                  {testingSmartPKL ? 'Menguji Login...' : 'Test Login SmartPKL'}
+                </button>
+
+                {smartpklTestResult && (
+                  <div className={`mt-2 p-3 rounded-lg text-xs flex items-start gap-2 ${
+                    smartpklTestResult.success
+                      ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                      : 'bg-red-50 text-red-800 border border-red-200'
+                  }`}>
+                    {smartpklTestResult.success
+                      ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />
+                      : <AlertCircle className="w-3.5 h-3.5 text-red-600 mt-0.5 shrink-0" />
+                    }
+                    <span>{smartpklTestResult.message}</span>
+                  </div>
+                )}
               </div>
             </div>
           )}

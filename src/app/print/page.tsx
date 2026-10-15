@@ -106,8 +106,16 @@ function PrintContent() {
 
       {/* A4 Sheet Container */}
       <div 
-        className="print-page bg-white max-w-[210mm] mx-auto p-12 shadow-lg border border-slate-200 print:shadow-none print:border-none print:p-0"
-        style={{ minHeight: '297mm', fontFamily: 'Calibri, sans-serif' }}
+        className="print-page print-page-tugas bg-white max-w-[210mm] mx-auto shadow-lg border border-slate-200 print:shadow-none print:border-none"
+        style={{
+          minHeight: '297mm',
+          paddingTop: '2cm',
+          paddingBottom: '2cm',
+          paddingLeft: '2.5cm',
+          paddingRight: '2cm',
+          boxSizing: 'border-box',
+          fontFamily: 'Calibri, sans-serif'
+        }}
       >
         {/* Kop Surat Header */}
         <div className="mb-4 text-center">
@@ -233,7 +241,7 @@ function PrintContent() {
         </div>
 
         {/* Signatures */}
-        <div className="mt-12 text-xs sm:text-sm text-black">
+        <div className="mt-12 text-xs sm:text-sm text-black break-inside-avoid" style={{ pageBreakInside: 'avoid' }}>
           <p className="text-center mb-4 font-normal">Mengetahui,</p>
           
           <div className="grid grid-cols-3 gap-4 text-center">
@@ -259,12 +267,12 @@ function PrintContent() {
         </div>
 
         {/* Footer Image */}
-        <div className="mt-14 pt-4 border-t border-slate-100 text-center">
+        <div className="mt-14 pt-4 border-t border-slate-100 text-center break-inside-avoid" style={{ pageBreakInside: 'avoid' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/assets/kop-footer.png"
             alt="Footer SMK TI BAZMA"
-            className="w-full max-h-16 object-contain mx-auto"
+            className="w-full"
           />
         </div>
       </div>

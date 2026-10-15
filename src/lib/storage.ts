@@ -26,6 +26,14 @@ const DEFAULT_SETTINGS: AppSettings = {
     serviceAccountEmail: '',
     privateKey: '',
     isConfigured: false
+  },
+  smartpkl: {
+    username: '2324009',
+    password: '123456',
+    // Yayasan Kesehatan Pertamina Simprug coordinates (approximate)
+    officeLatitude: -6.2254,
+    officeLongitude: 106.7977,
+    isConfigured: true
   }
 };
 
@@ -134,7 +142,8 @@ export function getSettings(): AppSettings {
     const parsed = JSON.parse(raw);
     return {
       profile: { ...DEFAULT_SETTINGS.profile, ...(parsed.profile || {}) },
-      google: { ...DEFAULT_SETTINGS.google, ...(parsed.google || {}) }
+      google: { ...DEFAULT_SETTINGS.google, ...(parsed.google || {}) },
+      smartpkl: { ...DEFAULT_SETTINGS.smartpkl, ...(parsed.smartpkl || {}) }
     };
   } catch (err) {
     console.error('Error reading settings file:', err);

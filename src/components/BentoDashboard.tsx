@@ -15,12 +15,22 @@ import {
   CheckCircle2,
   Clock,
   Compass,
-  Plus
+  Plus,
+  Camera,
+  LogOut,
+  AlertTriangle,
+  AlertCircle,
+  Bell,
+  BellRing,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 import { Task, AppSettings, AttendanceRecord } from '@/types';
-import { formatDateToIndonesian, getHariFromDate } from '@/lib/dateUtils';
+import { formatDateToIndonesian, getHariFromDate, getCurrentDateString } from '@/lib/dateUtils';
 import { ArrowRightIcon } from "@phosphor-icons/react/dist/ssr";
 import { TactileButton } from "@/components/TactileButton";
+import SmartPKLAbsenModal from "@/components/SmartPKLAbsenModal";
+import { alarmManager } from "@/lib/alarmAudio";
 
 interface BentoDashboardProps {
   tasks: Task[];
@@ -41,11 +51,24 @@ export default function BentoDashboard({
   const [minutes, setMinutes] = useState<string>('00');
   const [seconds, setSeconds] = useState<string>('00');
   const [currentSeconds, setCurrentSeconds] = useState<number>(0);
-  const [currentDateStr, setCurrentDateStr] = useState<string>('2026-10-14');
-  const [hariIni, setHariIni] = useState<string>('RAB');
-  const [dayNumber, setDayNumber] = useState<string>('14');
+  const [currentDateStr, setCurrentDateStr] = useState<string>('');
+  const [hariIni, setHariIni] = useState<string>('KAM');
+  const [dayNumber, setDayNumber] = useState<string>('15');
   const [attendanceList, setAttendanceList] = useState<AttendanceRecord[]>([]);
   const [todayAttendance, setTodayAttendance] = useState<AttendanceRecord | null>(null);
+  const [isAttendanceLoaded, setIsAttendanceLoaded] = useState(false);
+
+  // SmartPKL & Absen Pulang states
+  const [isSmartPKLModalOpen, setIsSmartPKLModalOpen] = useState(false);
+  const [isSubmittingPulang, setIsSubmittingPulang] = useState(false);
+  const [pulangSuccessMsg, setPulangSuccessMsg] = useState<string | null>(null);
+
+  // Alarm states (Pagi: 07:30 - 08:00, Pulang: 16:00)
+  const [isAlarmMuted, setIsAlarmMuted] = useState(false);
+  const [hasPlayedMorningAlarm, setHasPlayedMorningAlarm] = useState(false);
+  const [hasPlayedAfternoonAlarm, setHasPlayedAfternoonAlarm] = useState(false);
+  const [isMorningAlarmDismissed, setIsMorningAlarmDismissed] = useState(false);
+  const [isAfternoonAlarmDismissed, setIsAfternoonAlarmDismissed] = useState(false);
 
   // Initialize live clock
   useEffect(() => {
@@ -69,6 +92,11 @@ export default function BentoDashboard({
       const fullHari = getHariFromDate(dStr);
       // Short 3-letter day uppercase (e.g. 'SEL', 'RAB', 'KAM') for Zen Dots
       setHariIni(fullHari ? fullHari.slice(0, 3).toUpperCase() : 'RAB');
+
+      // PKL days elapsed
+      const pklStart = new Date('2026-08-03T00:00:00');
+      const diffMs = Math.max(0, now.getTime() - pklStart.getTime());
+      setTotalDaysElapsed(Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1);
     };
 
     updateTime();
@@ -83,11 +111,14 @@ export default function BentoDashboard({
       const data = await res.json();
       if (data.success && Array.isArray(data.data)) {
         setAttendanceList(data.data);
-        const todayRec = data.data.find((r: AttendanceRecord) => r.tanggal === currentDateStr);
+        const todayKey = currentDateStr || getCurrentDateString();
+        const todayRec = data.data.find((r: AttendanceRecord) => r.tanggal === todayKey);
         setTodayAttendance(todayRec || null);
       }
     } catch (e) {
       console.error('Error fetching attendance:', e);
+    } finally {
+      setIsAttendanceLoaded(true);
     }
   };
 
@@ -115,16 +146,247 @@ export default function BentoDashboard({
   const inProgressTasks = tasks.filter((t) => t.status === 'Sedang Berjalan');
 
   // Calculate Days of PKL since 3 Agustus 2026
-  const pklStartDate = new Date('2026-08-03T00:00:00');
-  const todayDate = new Date();
-  const diffTime = Math.max(0, todayDate.getTime() - pklStartDate.getTime());
-  const totalDaysElapsed = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+  const [totalDaysElapsed, setTotalDaysElapsed] = useState<number>(0);
 
   // Analog dial angle rotates continuously with current seconds (6deg per sec)
   const dialAngle = currentSeconds * 6;
 
+  // Time & attendance status computations
+  const currentHour = parseInt(hours, 10);
+  const currentMinute = parseInt(minutes, 10);
+  const currentTimeInMinutes = (isNaN(currentHour) ? 0 : currentHour) * 60 + (isNaN(currentMinute) ? 0 : currentMinute);
+
+  // Alarm Pagi: HANYA aktif pada rentang 07:30 WIB s/d 08:00 WIB (450 - 480 menit).
+  // Di atas jam 08:00 WIB, alarm pagi TIDAK AKAN PERNAH berbunyi!
+  const isMorningAlarmTime = currentTimeInMinutes >= 450 && currentTimeInMinutes <= 480;
+
+  // Alarm Pulang: Jam 16:00 WIB s/d 18:00 WIB (960 - 1080 menit)
+  const isAfterWork = currentTimeInMinutes >= 960;
+  const isAfternoonAlarmTime = currentTimeInMinutes >= 960 && currentTimeInMinutes <= 1080;
+
+  const hasCheckedIn = Boolean(
+    todayAttendance &&
+    todayAttendance.jamMasuk &&
+    todayAttendance.jamMasuk !== '-' &&
+    todayAttendance.jamMasuk !== ''
+  );
+  const hasCheckedOut = Boolean(
+    todayAttendance?.jamPulang &&
+    todayAttendance.jamPulang !== '-' &&
+    todayAttendance.jamPulang !== ''
+  );
+
+  // Status Alarm Aktif:
+  // WAJIB membaca data dulu (isAttendanceLoaded === true) dan HANYA berbunyi jika belum absen!
+  const isMorningAlarmActive = isAttendanceLoaded && isMorningAlarmTime && !hasCheckedIn;
+  const isAfternoonAlarmActive = isAttendanceLoaded && isAfternoonAlarmTime && !hasCheckedOut;
+
+  // Auto trigger alarm sound & notification
+  useEffect(() => {
+    if (isMorningAlarmActive && !hasPlayedMorningAlarm && !isAlarmMuted && !isMorningAlarmDismissed) {
+      alarmManager.playAlarm('morning');
+      alarmManager.sendNotification(
+        '🚨 Alarm Presensi Masuk (07:30 - 08:00 WIB)',
+        'Waktu sudah melewati 07:30 WIB dan kamu belum melakukan absensi masuk PKL hari ini!'
+      );
+      setHasPlayedMorningAlarm(true);
+    }
+  }, [isMorningAlarmActive, hasPlayedMorningAlarm, isAlarmMuted, isMorningAlarmDismissed]);
+
+  useEffect(() => {
+    if (isAfternoonAlarmActive && !hasPlayedAfternoonAlarm && !isAlarmMuted && !isAfternoonAlarmDismissed) {
+      alarmManager.playAlarm('afternoon');
+      alarmManager.sendNotification(
+        '🔔 Alarm Presensi Pulang (16:00 WIB)',
+        'Jam kerja PKL hari ini telah selesai (16:00 WIB). Waktunya absen pulang!'
+      );
+      setHasPlayedAfternoonAlarm(true);
+    }
+  }, [isAfternoonAlarmActive, hasPlayedAfternoonAlarm, isAlarmMuted, isAfternoonAlarmDismissed]);
+
+  // 1-Click Absen Pulang (Tanpa Akses Kamera)
+  const handleAbsenPulang = async (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (isSubmittingPulang) return;
+
+    try {
+      setIsSubmittingPulang(true);
+      const now = new Date();
+      const jamStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+
+      // 1. Notify smartpkl proxy
+      fetch('/api/smartpkl', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'pulang', jamPulang: jamStr }),
+      }).catch(console.error);
+
+      // 2. Save/update local attendance record
+      const res = await fetch('/api/attendance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tanggal: currentDateStr,
+          status: todayAttendance?.status || 'Hadir',
+          jamMasuk: todayAttendance?.jamMasuk || '08:00',
+          jamPulang: jamStr,
+          keterangan: todayAttendance?.keterangan || 'Presensi PKL Hari Ini',
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        await fetchAttendance();
+        onTaskUpdated?.();
+        setPulangSuccessMsg(`Berhasil Absen Pulang pukul ${jamStr} WIB! Selamat beristirahat 🎉`);
+        setTimeout(() => setPulangSuccessMsg(null), 6000);
+      } else {
+        alert(data.message || 'Gagal menyimpan absensi pulang.');
+      }
+    } catch (err: any) {
+      console.error('Error saat absen pulang:', err);
+      alert('Terjadi kesalahan saat memproses absen pulang.');
+    } finally {
+      setIsSubmittingPulang(false);
+    }
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
+      {/* ===== SUCCESS TOAST ===== */}
+      {pulangSuccessMsg && (
+        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center justify-between shadow-xs animate-in fade-in slide-in-from-top-1">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>{pulangSuccessMsg}</span>
+          </div>
+          <button
+            onClick={() => setPulangSuccessMsg(null)}
+            className="text-emerald-700/60 hover:text-emerald-900 text-base leading-none cursor-pointer"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
+      {/* ===== ALARM BANNER PAGI (Jam >= 07:30 & Belum Absen Masuk) ===== */}
+      {isMorningAlarmActive && !isMorningAlarmDismissed && (
+        <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-r from-rose-500/15 via-orange-500/15 to-amber-500/15 border-2 border-rose-400/80 p-4 sm:p-5 shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-2xl bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-md animate-bounce ring-4 ring-rose-400/30">
+              <BellRing className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-600 text-white uppercase tracking-wider shadow-xs animate-pulse">
+                  🚨 ALARM 07:30 WIB
+                </span>
+                <span className="text-xs font-semibold text-rose-800">
+                  Wajib Presensi Masuk
+                </span>
+              </div>
+              <h4 className="text-sm sm:text-base font-bold text-slate-900 mt-1">
+                Kamu Belum Absen Hari Ini!
+              </h4>
+              <p className="text-xs text-slate-600 mt-0.5">
+                Jam telah melewati batas alarm <strong>07:30 WIB</strong>. Segera lakukan Absen Masuk selfie terintegrasi SmartPKL BAZMA.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto shrink-0 pt-1 sm:pt-0">
+            <button
+              onClick={() => {
+                const nextMuted = !isAlarmMuted;
+                setIsAlarmMuted(nextMuted);
+                if (!nextMuted) alarmManager.playAlarm('morning');
+              }}
+              className="px-3 py-2 rounded-xl text-xs font-semibold bg-white/80 hover:bg-white text-slate-700 border border-slate-200/80 transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+              title={isAlarmMuted ? 'Bunyikan Alarm' : 'Matikan Suara Alarm'}
+            >
+              {isAlarmMuted ? <VolumeX className="w-3.5 h-3.5 text-rose-500" /> : <Volume2 className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />}
+              <span>{isAlarmMuted ? 'Suara Mati' : 'Tes Bunyi'}</span>
+            </button>
+            <TactileButton
+              size="sm"
+              variant="rose"
+              className="ring-2 ring-rose-400/50"
+              onClick={() => setIsSmartPKLModalOpen(true)}
+            >
+              <Camera size={13} strokeWidth={2.5} />
+              <span>Absen Masuk Sekarang</span>
+            </TactileButton>
+            <button
+              onClick={() => setIsMorningAlarmDismissed(true)}
+              className="p-2 text-slate-400 hover:text-slate-700 rounded-xl hover:bg-slate-200/60 transition cursor-pointer"
+              title="Tutup Peringatan"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ===== ALARM BANNER PULANG (Jam >= 16:00 & Belum Absen Pulang) ===== */}
+      {isAfternoonAlarmActive && !isAfternoonAlarmDismissed && (
+        <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-r from-orange-500/15 via-amber-500/15 to-emerald-500/15 border-2 border-orange-400/80 p-4 sm:p-5 shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-2xl bg-orange-600 text-white flex items-center justify-center shrink-0 shadow-md animate-bounce ring-4 ring-orange-400/30">
+              <BellRing className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-orange-600 text-white uppercase tracking-wider shadow-xs animate-pulse">
+                  🔔 ALARM 16:00 WIB
+                </span>
+                <span className="text-xs font-semibold text-orange-800">
+                  Waktunya Pulang PKL
+                </span>
+              </div>
+              <h4 className="text-sm sm:text-base font-bold text-slate-900 mt-1">
+                Waktunya Absen Pulang!
+              </h4>
+              <p className="text-xs text-slate-600 mt-0.5">
+                Jam kerja PKL hari ini telah selesai (pukul 16:00 WIB). Cukup 1 klik tanpa kamera untuk konfirmasi absen pulang di Task Tracker.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto shrink-0 pt-1 sm:pt-0">
+            <button
+              onClick={() => {
+                const nextMuted = !isAlarmMuted;
+                setIsAlarmMuted(nextMuted);
+                if (!nextMuted) alarmManager.playAlarm('afternoon');
+              }}
+              className="px-3 py-2 rounded-xl text-xs font-semibold bg-white/80 hover:bg-white text-slate-700 border border-slate-200/80 transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+              title={isAlarmMuted ? 'Bunyikan Alarm' : 'Matikan Suara Alarm'}
+            >
+              {isAlarmMuted ? <VolumeX className="w-3.5 h-3.5 text-amber-500" /> : <Volume2 className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />}
+              <span>{isAlarmMuted ? 'Suara Mati' : 'Tes Bunyi'}</span>
+            </button>
+            <TactileButton
+              size="sm"
+              variant="amber"
+              className="ring-2 ring-amber-400/50"
+              onClick={handleAbsenPulang}
+              disabled={isSubmittingPulang}
+            >
+              <CheckCircle2 size={13} strokeWidth={2.5} />
+              <span>{isSubmittingPulang ? 'Menyimpan...' : 'Absen Pulang (1 Klik)'}</span>
+            </TactileButton>
+            <button
+              onClick={() => setIsAfternoonAlarmDismissed(true)}
+              className="p-2 text-slate-400 hover:text-slate-700 rounded-xl hover:bg-slate-200/60 transition cursor-pointer"
+              title="Tutup Peringatan"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* =========================================================================
           ROW 1 BENTO:
           - CARD 1: APPLE WATCH ULTRA SMARTWATCH TIMEPIECE (Exact Image 2)
@@ -264,11 +526,11 @@ export default function BentoDashboard({
             </div>
 
             {/* Right Column: 3D Yellow Pocket Console (Playdate Style) */}
-            <div className="relative shrink-0 w-36 sm:w-44 h-36 sm:h-44 flex items-center justify-center">
+            <div className="relative shrink-0 w-36 sm:w-50 h-36 sm:h-50 flex items-center justify-center">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src="/assets/playdate-3d.png"
-                alt="3D Yellow Pocket Console"
+                src="/assets/Profile.png"
+                alt="Profile Image"
                 className="w-full h-full object-contain filter drop-shadow-xl transition-all duration-500 ease-out group-hover:scale-110 group-hover:-translate-y-2 group-hover:rotate-2"
               />
             </div>
@@ -351,8 +613,8 @@ export default function BentoDashboard({
         </Link>
 
         {/* ===== CARD 4: ABSENSI HARIAN (Image 1 Rabbit R1 Style) ===== */}
-        <Link
-          href="/absensi"
+        <div
+          onClick={() => router.push('/absensi')}
           className="bento-card p-6 sm:p-8 flex flex-col justify-between bg-white relative overflow-hidden group hover:shadow-2xl transition-all duration-500 rounded-[2.2rem] border border-black/[0.04] cursor-pointer"
         >
           {/* Subtle Ambient Background Glow on Hover */}
@@ -367,14 +629,80 @@ export default function BentoDashboard({
                 HARIAN.
               </h2>
 
-              {/* Status Box Live Presensi */}
+              {/* 1 Single Dynamic Spotlight Button */}
               <div className="pt-2">
-                <div className="inline-flex items-center gap-2 p-2 px-3 rounded-xl bg-slate-50 border border-slate-100 text-xs">
-                  <span className={`w-2 h-2 rounded-full ${todayAttendance ? 'bg-emerald-500' : 'bg-amber-400 animate-pulse'}`} />
-                  <span className="font-semibold text-slate-800">
-                    {todayAttendance ? `Tercatat: ${todayAttendance.status} (${todayAttendance.jamMasuk})` : 'Belum Presensi Hari Ini'}
-                  </span>
-                </div>
+                {!isAttendanceLoaded ? (
+                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-100 text-slate-400 text-xs font-semibold animate-pulse">
+                    <span>Memeriksa presensi...</span>
+                  </div>
+                ) : !isAfterWork ? (
+                  !hasCheckedIn ? (
+                    // KONDISI 1: Belum Absen Masuk -> SPOTLIGHT bahwa kamu belum absen
+                    <div className="relative inline-flex items-center">
+                      <span className="absolute -inset-1 rounded-full bg-rose-500/35 blur-sm animate-pulse" />
+                      <TactileButton
+                        size="md"
+                        variant="rose"
+                        className="relative ring-4 ring-rose-400/40 shadow-rose-500/30 animate-pulse hover:animate-none cursor-pointer"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setIsSmartPKLModalOpen(true);
+                        }}
+                      >
+                        <AlertCircle size={15} strokeWidth={2.5} className="animate-bounce" />
+                        <span>Kamu Belum Absen! (Absen Sekarang)</span>
+                      </TactileButton>
+                    </div>
+                  ) : (
+                    // KONDISI 2: Sudah Absen Masuk -> Tulisannya kamu sudah absen di jam sekian
+                    <TactileButton
+                      size="md"
+                      variant="emerald"
+                      className="ring-2 ring-emerald-400/30 cursor-pointer shadow-sm hover:scale-[1.02] transition-transform"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        router.push('/absensi');
+                      }}
+                      title="Klik untuk membuka riwayat presensi"
+                    >
+                      <CheckCircle2 size={15} strokeWidth={2.5} />
+                      <span>Kamu sudah absen ({todayAttendance?.jamMasuk || '07:44'})</span>
+                    </TactileButton>
+                  )
+                ) : !hasCheckedOut ? (
+                  // KONDISI 3: Jam Pulang (>= 16:00) & Belum Absen Pulang -> SPOTLIGHT berubah jadi absen pulang
+                  <div className="relative inline-flex items-center">
+                    <span className="absolute -inset-1 rounded-full bg-amber-500/35 blur-sm animate-pulse" />
+                    <TactileButton
+                      size="md"
+                      variant="amber"
+                      disabled={isSubmittingPulang}
+                      className="relative ring-4 ring-amber-400/40 shadow-amber-500/30 animate-pulse hover:animate-none cursor-pointer"
+                      onClick={handleAbsenPulang}
+                    >
+                      <LogOut size={15} strokeWidth={2.5} />
+                      <span>{isSubmittingPulang ? 'Menyimpan...' : 'Absen Pulang (1 Klik)'}</span>
+                    </TactileButton>
+                  </div>
+                ) : (
+                  // KONDISI 4: Jam Pulang & Sudah Pulang
+                  <TactileButton
+                    size="md"
+                    variant="emerald"
+                    className="ring-2 ring-emerald-400/30 cursor-pointer shadow-sm hover:scale-[1.02] transition-transform"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      router.push('/absensi');
+                    }}
+                    title="Klik untuk membuka riwayat presensi"
+                  >
+                    <CheckCircle2 size={15} strokeWidth={2.5} />
+                    <span>Sudah absen pulang ({todayAttendance?.jamPulang}) ✓</span>
+                  </TactileButton>
+                )}
               </div>
             </div>
 
@@ -398,9 +726,19 @@ export default function BentoDashboard({
               Go to page <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
             </span>
           </div>
-        </Link>
+        </div>
 
       </div>
+
+      {/* SmartPKL Absen Modal */}
+      <SmartPKLAbsenModal
+        isOpen={isSmartPKLModalOpen}
+        onClose={() => setIsSmartPKLModalOpen(false)}
+        onSuccess={() => {
+          fetchAttendance();
+          onTaskUpdated?.();
+        }}
+      />
     </div>
   );
 }

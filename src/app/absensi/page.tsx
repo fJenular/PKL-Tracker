@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { 
   ArrowLeft, 
   UserCheck, 
@@ -15,16 +16,22 @@ import {
   FileText,
   Building2,
   ShieldAlert,
-  Info
+  Info,
+  Camera,
+  LogOut,
+  RefreshCw,
+  ExternalLink
 } from 'lucide-react';
 import FloatingActionMenu from '@/components/FloatingActionMenu';
 import SettingsModal from '@/components/SettingsModal';
 import GoogleGuideModal from '@/components/GoogleGuideModal';
 import ReportModal from '@/components/ReportModal';
+import SmartPKLAbsenModal from '@/components/SmartPKLAbsenModal';
+import AttendanceReportModal from '@/components/AttendanceReportModal';
 import { AttendanceRecord, AppSettings, Task } from '@/types';
 import { formatDateToIndonesian, getHariFromDate, getCurrentDateString, getCurrentTimeString, getBulanFromDate } from '@/lib/dateUtils';
 
-export default function AbsensiPage() {
+function AbsensiContent() {
   const [attendanceList, setAttendanceList] = useState<AttendanceRecord[]>([]);
   const [monthFilter, setMonthFilter] = useState<string>('Oktober');
   const [settings, setSettings] = useState<AppSettings | null>(null);
@@ -36,6 +43,11 @@ export default function AbsensiPage() {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [isAttendanceReportModalOpen, setIsAttendanceReportModalOpen] = useState(false);
+  const [isSmartPKLModalOpen, setIsSmartPKLModalOpen] = useState(false);
+  const [isSubmittingPulang, setIsSubmittingPulang] = useState(false);
+  const [isSyncingSmartPKL, setIsSyncingSmartPKL] = useState(false);
+  const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
 
   // Form state
   const [tanggal, setTanggal] = useState(getCurrentDateString());
@@ -81,22 +93,105 @@ export default function AbsensiPage() {
   const todayStr = getCurrentDateString();
   const todayRecord = attendanceList.find((r) => r.tanggal === todayStr);
 
+  const currentHour = new Date().getHours();
+  const isAfterWork = currentHour >= 16;
+  const hasCheckedIn = Boolean(todayRecord && todayRecord.jamMasuk && todayRecord.jamMasuk !== '-');
+  const hasCheckedOut = Boolean(todayRecord?.jamPulang && todayRecord.jamPulang !== '-' && todayRecord.jamPulang !== '');
+
+  // 1-Click Absen Pulang (Tanpa Akses Kamera)
+  const handleAbsenPulang = async () => {
+    if (isSubmittingPulang) return;
+    try {
+      setIsSubmittingPulang(true);
+      const jamStr = getCurrentTimeString();
+
+      fetch('/api/smartpkl', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'pulang', jamPulang: jamStr }),
+      }).catch(console.error);
+
+      const res = await fetch('/api/attendance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tanggal: todayStr,
+          status: todayRecord?.status || 'Hadir',
+          jamMasuk: todayRecord?.jamMasuk || '08:00',
+          jamPulang: jamStr,
+          keterangan: todayRecord?.keterangan || 'Presensi PKL Hari Ini',
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        showNotification(`Berhasil Absen Pulang pukul ${jamStr} WIB! 🎉`, 'success');
+        fetchAttendance();
+      } else {
+        showNotification(data.message || 'Gagal mencatat absen pulang.', 'error');
+      }
+    } catch (e: any) {
+      showNotification('Terjadi kesalahan saat memproses absen pulang.', 'error');
+    } finally {
+      setIsSubmittingPulang(false);
+    }
+  };
+
+  // Sinkronisasi data riwayat dari SmartPKL
+  const handleSyncSmartPKL = async () => {
+    if (isSyncingSmartPKL) return;
+    try {
+      setIsSyncingSmartPKL(true);
+      showNotification('Sedang menyinkronkan data dengan SmartPKL...', 'info');
+      const res = await fetch('/api/smartpkl', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'sync' }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showNotification(data.message || 'Data presensi berhasil disinkronkan dengan SmartPKL! 🎉', 'success');
+        await fetchAttendance();
+      } else {
+        showNotification(data.message || 'Gagal menyinkronkan data dengan SmartPKL.', 'error');
+      }
+    } catch (e: any) {
+      showNotification('Terjadi kesalahan saat sinkronisasi SmartPKL.', 'error');
+    } finally {
+      setIsSyncingSmartPKL(false);
+    }
+  };
+
   const openFormForToday = () => {
     if (todayRecord) {
       setTanggal(todayRecord.tanggal);
       setStatus(todayRecord.status);
       setJamMasuk(todayRecord.jamMasuk || '07:45');
-      setJamPulang(todayRecord.jamPulang || '16:30');
+      setJamPulang(todayRecord.jamPulang || '');
       setKeterangan(todayRecord.keterangan || '');
     } else {
       setTanggal(todayStr);
       setStatus('Hadir');
       setJamMasuk(getCurrentTimeString());
-      setJamPulang('16:30');
+      setJamPulang('');
       setKeterangan(`Hadir di ${settings?.profile.tempatPkl || 'Yayasan Kesehatan Pertamina'}`);
     }
     setIsModalOpen(true);
   };
+
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Auto-open attendance form when navigated with ?new=1 or ?smartpkl=1
+  useEffect(() => {
+    if (!loading && searchParams.get('new') === '1') {
+      openFormForToday();
+      router.replace('/absensi', { scroll: false });
+    } else if (searchParams.get('smartpkl') === '1') {
+      setIsSmartPKLModalOpen(true);
+      router.replace('/absensi', { scroll: false });
+    }
+  }, [loading, searchParams, router, todayRecord, settings]);
 
   const handleSaveAttendance = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -161,24 +256,113 @@ export default function AbsensiPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
-              onClick={() => setIsReportModalOpen(true)}
+              onClick={() => setIsAttendanceReportModalOpen(true)}
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-2xs transition-colors cursor-pointer"
             >
               <FileText className="w-3.5 h-3.5 text-sky-600" />
-              <span>Cetak Rekap</span>
+              <span>Export Laporan Absensi</span>
             </button>
 
             <button
+              onClick={handleSyncSmartPKL}
+              disabled={isSyncingSmartPKL}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white hover:bg-slate-50 text-indigo-700 border border-indigo-200 shadow-2xs transition-colors cursor-pointer disabled:opacity-50"
+              title="Sinkronkan seluruh data riwayat dari SmartPKL"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isSyncingSmartPKL ? 'animate-spin' : ''}`} />
+              <span>{isSyncingSmartPKL ? 'Sinkron...' : 'Sinkron SmartPKL'}</span>
+            </button>
+
+            {!isAfterWork ? (
+              <button
+                onClick={() => setIsSmartPKLModalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-all cursor-pointer hover:shadow-sm"
+              >
+                <Camera className="w-3.5 h-3.5" />
+                <span>Absen SmartPKL</span>
+              </button>
+            ) : !hasCheckedOut ? (
+              <button
+                onClick={handleAbsenPulang}
+                disabled={isSubmittingPulang}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-amber-500 hover:bg-amber-600 text-white shadow-xs transition-all cursor-pointer hover:shadow-sm"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>{isSubmittingPulang ? 'Menyimpan...' : 'Absen Pulang (1 Klik)'}</span>
+              </button>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>Sudah Pulang</span>
+              </span>
+            )}
+
+            <button
               onClick={openFormForToday}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-sky-600 hover:bg-sky-700 text-white shadow-sm transition-all cursor-pointer hover:shadow-md"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white shadow-sm transition-all cursor-pointer hover:shadow-md"
             >
               <Plus className="w-4 h-4" />
-              <span>{todayRecord ? 'Ubah Presensi Hari Ini' : 'Catat Presensi Hari Ini'}</span>
+              <span>{todayRecord ? 'Edit Manual' : 'Input Manual'}</span>
             </button>
           </div>
         </div>
+
+        {/* Morning Warning Banner: Belum Absen */}
+        {!isAfterWork && !hasCheckedIn && (
+          <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-rose-500/10 border border-amber-300/80 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-in fade-in">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-sm animate-pulse">
+                <Clock className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <span>Kamu Belum Absen Hari Ini!</span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700 uppercase">Peringatan</span>
+                </h4>
+                <p className="text-xs text-slate-600 mt-0.5">
+                  Silakan lakukan absen masuk selfie terintegrasi SmartPKL BAZMA sebelum memulai pekerjaan PKL.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setIsSmartPKLModalOpen(true)}
+              className="w-full sm:w-auto px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer"
+            >
+              <Camera className="w-3.5 h-3.5" />
+              <span>Absen Masuk Sekarang</span>
+            </button>
+          </div>
+        )}
+
+        {/* Afternoon Reminder Banner: Waktunya Absen Pulang */}
+        {isAfterWork && !hasCheckedOut && (
+          <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-orange-500/10 via-amber-500/10 to-emerald-500/10 border border-orange-300/80 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-in fade-in">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-orange-500 text-white flex items-center justify-center shrink-0 shadow-sm animate-bounce">
+                <LogOut className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <span>Waktunya Absen Pulang!</span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-800 uppercase">Jam 16:00+</span>
+                </h4>
+                <p className="text-xs text-slate-600 mt-0.5">
+                  Jam kerja PKL telah selesai. Klik tombol di samping untuk konfirmasi pulang tanpa kamera.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleAbsenPulang}
+              disabled={isSubmittingPulang}
+              className="w-full sm:w-auto px-4 py-2 rounded-xl text-xs font-bold text-white bg-amber-500 hover:bg-amber-600 flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer"
+            >
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>{isSubmittingPulang ? 'Menyimpan...' : 'Absen Pulang (1 Klik)'}</span>
+            </button>
+          </div>
+        )}
 
         {/* Notification Toast */}
         {notification && (
@@ -285,6 +469,42 @@ export default function AbsensiPage() {
           </div>
         </div>
 
+        {/* SmartPKL Integration Banner */}
+        <div
+          className="relative rounded-2xl overflow-hidden p-5 flex items-center justify-between gap-4"
+          style={{
+            background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 60%, #312e81 100%)',
+            border: '1px solid rgba(99,102,241,0.25)',
+          }}
+        >
+          {/* Background glow */}
+          <div className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10 pointer-events-none" style={{ background: 'radial-gradient(circle, #818cf8, transparent)', transform: 'translate(30%,-30%)' }} />
+          
+          <div className="flex items-center gap-4">
+            <div
+              className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0"
+              style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}
+            >
+              <ShieldAlert className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h3 className="text-white font-bold text-sm">Absensi SmartPKL Terintegrasi</h3>
+              <p className="text-indigo-300 text-xs mt-0.5">
+                Absen langsung ke web SmartPKL dengan foto selfie & lokasi otomatis
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => setIsSmartPKLModalOpen(true)}
+            className="shrink-0 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90 cursor-pointer shadow-lg"
+            style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}
+          >
+            <Building2 className="w-4 h-4" />
+            <span>Absen Sekarang</span>
+          </button>
+        </div>
+
         {/* Tabel Riwayat Kehadiran */}
         <div className="bento-card overflow-hidden">
           {/* Month Sheet Tabs Bar */}
@@ -342,12 +562,13 @@ export default function AbsensiPage() {
                   <th className="py-3 px-4">Jam Masuk</th>
                   <th className="py-3 px-4">Jam Pulang</th>
                   <th className="py-3 px-4">Keterangan</th>
+                  <th className="py-3 px-4 text-center">Foto</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {attendanceList.filter(a => monthFilter === 'all' || getBulanFromDate(a.tanggal) === monthFilter).length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-8 text-center text-slate-400 text-xs">
+                    <td colSpan={7} className="py-8 text-center text-slate-400 text-xs">
                       Belum ada data presensi yang tercatat untuk bulan {monthFilter}.
                     </td>
                   </tr>
@@ -389,6 +610,21 @@ export default function AbsensiPage() {
                       </td>
                       <td className="py-3.5 px-4 text-slate-600">
                         {rec.keterangan || '-'}
+                      </td>
+                      <td className="py-3.5 px-4 text-center">
+                        {rec.fotoUrl ? (
+                          <button
+                            type="button"
+                            onClick={() => setPreviewPhoto(rec.fotoUrl || null)}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-[11px] font-semibold transition cursor-pointer group"
+                            title="Lihat foto selfie SmartPKL"
+                          >
+                            <Camera className="w-3.5 h-3.5 text-indigo-600" />
+                            <span>Lihat Foto</span>
+                          </button>
+                        ) : (
+                          <span className="text-slate-300">-</span>
+                        )}
                       </td>
                     </tr>
                   ))
@@ -540,6 +776,16 @@ export default function AbsensiPage() {
         </div>
       )}
 
+      {/* SmartPKL Absen Modal */}
+      <SmartPKLAbsenModal
+        isOpen={isSmartPKLModalOpen}
+        onClose={() => setIsSmartPKLModalOpen(false)}
+        onSuccess={() => {
+          showNotification('Absensi SmartPKL berhasil dikirim! ✅', 'success');
+          fetchAttendance();
+        }}
+      />
+
       {/* Settings & Guide Modals */}
       <SettingsModal
         isOpen={isSettingsModalOpen}
@@ -573,6 +819,75 @@ export default function AbsensiPage() {
         tasks={tasks}
         settings={settings}
       />
+
+      <AttendanceReportModal
+        isOpen={isAttendanceReportModalOpen}
+        onClose={() => setIsAttendanceReportModalOpen(false)}
+        attendanceRecords={attendanceList}
+        settings={settings}
+      />
+
+      {/* Lightbox / Modal Preview Foto SmartPKL */}
+      {previewPhoto && (
+        <div 
+          className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in"
+          onClick={() => setPreviewPhoto(null)}
+        >
+          <div 
+            className="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+              <div className="flex items-center gap-2">
+                <Camera className="w-4 h-4 text-indigo-600" />
+                <h3 className="text-sm font-bold text-slate-900">Foto Presensi SmartPKL</h3>
+              </div>
+              <button
+                onClick={() => setPreviewPhoto(null)}
+                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-200 transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4 flex flex-col items-center">
+              <div className="w-full aspect-4/3 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 flex items-center justify-center relative shadow-inner">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={previewPhoto}
+                  alt="Foto Selfie Presensi SmartPKL"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="mt-3.5 w-full flex items-center justify-between text-xs text-slate-500">
+                <span className="truncate max-w-[200px] text-[11px]">Server: SmartPKL BAZMA</span>
+                <a
+                  href={previewPhoto}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-800 font-semibold"
+                >
+                  <span>Buka Gambar Penuh</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+export default function AbsensiPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#f2f3f7] flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900" />
+        </div>
+      }
+    >
+      <AbsensiContent />
+    </Suspense>
   );
 }

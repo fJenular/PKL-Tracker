@@ -28,6 +28,9 @@ export interface ProfileSettings {
   userDuDi: string;        // e.g. "(..................................)" or PIC name
   pesertaPkl: string;      // e.g. "Fakhri Zainul Arifin"
   defaultTempat: string;   // e.g. "Ruang IT / Server"
+  managerIt?: string;      // e.g. "Bagus Dwi Laksono"
+  periodePkl?: string;     // e.g. "2026-2027"
+  tanggalMulaiPkl?: string;// e.g. "2026-08-03"
 }
 
 export interface GoogleSettings {
@@ -40,16 +43,27 @@ export interface GoogleSettings {
   isConfigured: boolean;
 }
 
+export interface SmartPKLSettings {
+  username: string;
+  password: string;
+  // Office/DU-DI GPS coordinates (center point)
+  officeLatitude: number;
+  officeLongitude: number;
+  isConfigured: boolean;
+}
+
 export interface AttendanceRecord {
   tanggal: string; // YYYY-MM-DD
   status: 'Hadir' | 'Izin' | 'Sakit' | 'Libur';
   jamMasuk?: string;
   jamPulang?: string;
   keterangan?: string;
+  fotoUrl?: string;
   createdAt?: string;
 }
 
 export interface AppSettings {
   profile: ProfileSettings;
   google: GoogleSettings;
+  smartpkl: SmartPKLSettings;
 }

@@ -138,3 +138,30 @@ export function formatMonthRange(dateFrom?: string, dateTo?: string): string {
   }
   return `${startBt} - ${endBt}`;
 }
+
+export function formatDateSlash(dateString: string): string {
+  if (!dateString) return '';
+  const parts = dateString.split('-');
+  if (parts.length === 3) {
+    const year = parts[0];
+    const month = parts[1].padStart(2, '0');
+    const day = parts[2].padStart(2, '0');
+    return `${day}/${month}/${year}`;
+  }
+  return dateString;
+}
+
+export function calculateTotalHariPKL(endDateStr: string, startDateStr: string = '2026-08-03'): number {
+  if (!endDateStr) return 0;
+  const startParts = startDateStr.split('-').map(Number);
+  const endParts = endDateStr.split('-').map(Number);
+  if (startParts.length !== 3 || endParts.length !== 3) return 0;
+
+  const startUtc = Date.UTC(startParts[0], startParts[1] - 1, startParts[2]);
+  const endUtc = Date.UTC(endParts[0], endParts[1] - 1, endParts[2]);
+
+  if (endUtc < startUtc) return 0;
+
+  const diffDays = Math.floor((endUtc - startUtc) / (1000 * 60 * 60 * 24)) + 1;
+  return Math.max(1, diffDays);
+}
