@@ -23,7 +23,11 @@ import {
   Bell,
   BellRing,
   Volume2,
-  VolumeX
+  VolumeX,
+  ChevronDown,
+  FileText,
+  RefreshCw,
+  Settings
 } from 'lucide-react';
 import { Task, AppSettings, AttendanceRecord } from '@/types';
 import { formatDateToIndonesian, getHariFromDate, getCurrentDateString } from '@/lib/dateUtils';
@@ -37,13 +41,23 @@ interface BentoDashboardProps {
   settings: AppSettings | null;
   onOpenNewTask?: () => void;
   onTaskUpdated?: () => void;
+  onOpenReport?: () => void;
+  onOpenSettings?: () => void;
+  onSyncAll?: () => void;
+  isSyncing?: boolean;
+  unsyncedCount?: number;
 }
 
 export default function BentoDashboard({
   tasks,
   settings,
   onOpenNewTask,
-  onTaskUpdated
+  onTaskUpdated,
+  onOpenReport,
+  onOpenSettings,
+  onSyncAll,
+  isSyncing = false,
+  unsyncedCount = 0
 }: BentoDashboardProps) {
   const router = useRouter();
   // Live clock & date state
@@ -255,12 +269,12 @@ export default function BentoDashboard({
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-2 sm:space-y-5">
       {/* ===== SUCCESS TOAST ===== */}
       {pulangSuccessMsg && (
-        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center justify-between shadow-xs animate-in fade-in slide-in-from-top-1">
+        <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] sm:text-xs font-semibold flex items-center justify-between shadow-xs animate-in fade-in slide-in-from-top-1">
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <CheckCircle2 className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-emerald-600 shrink-0" />
             <span>{pulangSuccessMsg}</span>
           </div>
           <button
@@ -274,53 +288,51 @@ export default function BentoDashboard({
 
       {/* ===== ALARM BANNER PAGI (Jam >= 07:30 & Belum Absen Masuk) ===== */}
       {isMorningAlarmActive && !isMorningAlarmDismissed && (
-        <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-r from-rose-500/15 via-orange-500/15 to-amber-500/15 border-2 border-rose-400/80 p-4 sm:p-5 shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
-          <div className="flex items-center gap-3.5">
-            <div className="w-11 h-11 rounded-2xl bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-md animate-bounce ring-4 ring-rose-400/30">
-              <BellRing className="w-5 h-5" />
+        <div className="relative overflow-hidden rounded-xl sm:rounded-3xl bg-gradient-to-r from-rose-500/15 via-orange-500/15 to-amber-500/15 border-2 border-rose-400/80 p-2.5 sm:p-5 shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 sm:gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="flex items-center gap-2.5 sm:gap-3.5">
+            <div className="w-8 h-8 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-md animate-bounce ring-2 sm:ring-4 ring-rose-400/30">
+              <BellRing className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-600 text-white uppercase tracking-wider shadow-xs animate-pulse">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <span className="px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-extrabold bg-rose-600 text-white uppercase tracking-wider shadow-xs animate-pulse">
                   🚨 ALARM 07:30 WIB
                 </span>
-                <span className="text-xs font-semibold text-rose-800">
+                <span className="text-[11px] sm:text-xs font-semibold text-rose-800">
                   Wajib Presensi Masuk
                 </span>
               </div>
-              <h4 className="text-sm sm:text-base font-bold text-slate-900 mt-1">
+              <h4 className="text-xs sm:text-base font-bold text-slate-900 mt-0.5 sm:mt-1">
                 Kamu Belum Absen Hari Ini!
               </h4>
-              <p className="text-xs text-slate-600 mt-0.5">
+              <p className="hidden sm:block text-xs text-slate-600 mt-0.5">
                 Jam telah melewati batas alarm <strong>07:30 WIB</strong>. Segera lakukan Absen Masuk selfie terintegrasi SmartPKL BAZMA.
               </p>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto shrink-0 pt-1 sm:pt-0">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 w-full sm:w-auto shrink-0 pt-0.5 sm:pt-0">
             <button
               onClick={() => {
                 const nextMuted = !isAlarmMuted;
                 setIsAlarmMuted(nextMuted);
                 if (!nextMuted) alarmManager.playAlarm('morning');
               }}
-              className="px-3 py-2 rounded-xl text-xs font-semibold bg-white/80 hover:bg-white text-slate-700 border border-slate-200/80 transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+              className="px-2.5 py-1 sm:px-3 sm:py-2 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-semibold bg-white/80 hover:bg-white text-slate-700 border border-slate-200/80 transition-colors flex items-center gap-1 sm:gap-1.5 cursor-pointer shadow-xs"
               title={isAlarmMuted ? 'Bunyikan Alarm' : 'Matikan Suara Alarm'}
             >
-              {isAlarmMuted ? <VolumeX className="w-3.5 h-3.5 text-rose-500" /> : <Volume2 className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />}
-              <span>{isAlarmMuted ? 'Suara Mati' : 'Tes Bunyi'}</span>
+              {isAlarmMuted ? <VolumeX className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-rose-500" /> : <Volume2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-600 animate-pulse" />}
+              <span>{isAlarmMuted ? 'Muted' : 'Tes Suara'}</span>
             </button>
-            <TactileButton
-              size="sm"
-              variant="rose"
-              className="ring-2 ring-rose-400/50"
+            <button
               onClick={() => setIsSmartPKLModalOpen(true)}
+              className="px-3 py-1 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white transition-all flex items-center gap-1 sm:gap-1.5 shadow-xs cursor-pointer active:scale-95"
             >
-              <Camera size={13} strokeWidth={2.5} />
+              <Camera size={12} strokeWidth={2.5} />
               <span>Absen Masuk Sekarang</span>
-            </TactileButton>
+            </button>
             <button
               onClick={() => setIsMorningAlarmDismissed(true)}
-              className="p-2 text-slate-400 hover:text-slate-700 rounded-xl hover:bg-slate-200/60 transition cursor-pointer"
+              className="p-1 sm:p-2 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-200/60 transition cursor-pointer ml-auto sm:ml-0"
               title="Tutup Peringatan"
             >
               ×
@@ -331,54 +343,52 @@ export default function BentoDashboard({
 
       {/* ===== ALARM BANNER PULANG (Jam >= 16:00 & Belum Absen Pulang) ===== */}
       {isAfternoonAlarmActive && !isAfternoonAlarmDismissed && (
-        <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-r from-orange-500/15 via-amber-500/15 to-emerald-500/15 border-2 border-orange-400/80 p-4 sm:p-5 shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
-          <div className="flex items-center gap-3.5">
-            <div className="w-11 h-11 rounded-2xl bg-orange-600 text-white flex items-center justify-center shrink-0 shadow-md animate-bounce ring-4 ring-orange-400/30">
-              <BellRing className="w-5 h-5" />
+        <div className="relative overflow-hidden rounded-xl sm:rounded-3xl bg-gradient-to-r from-orange-500/15 via-amber-500/15 to-emerald-500/15 border-2 border-orange-400/80 p-2.5 sm:p-5 shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 sm:gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="flex items-center gap-2.5 sm:gap-3.5">
+            <div className="w-8 h-8 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-orange-600 text-white flex items-center justify-center shrink-0 shadow-md animate-bounce ring-2 sm:ring-4 ring-orange-400/30">
+              <BellRing className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-orange-600 text-white uppercase tracking-wider shadow-xs animate-pulse">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <span className="px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-extrabold bg-orange-600 text-white uppercase tracking-wider shadow-xs animate-pulse">
                   🔔 ALARM 16:00 WIB
                 </span>
-                <span className="text-xs font-semibold text-orange-800">
+                <span className="text-[11px] sm:text-xs font-semibold text-orange-800">
                   Waktunya Pulang PKL
                 </span>
               </div>
-              <h4 className="text-sm sm:text-base font-bold text-slate-900 mt-1">
+              <h4 className="text-xs sm:text-base font-bold text-slate-900 mt-0.5 sm:mt-1">
                 Waktunya Absen Pulang!
               </h4>
-              <p className="text-xs text-slate-600 mt-0.5">
+              <p className="hidden sm:block text-xs text-slate-600 mt-0.5">
                 Jam kerja PKL hari ini telah selesai (pukul 16:00 WIB). Cukup 1 klik tanpa kamera untuk konfirmasi absen pulang di Task Tracker.
               </p>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto shrink-0 pt-1 sm:pt-0">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 w-full sm:w-auto shrink-0 pt-0.5 sm:pt-0">
             <button
               onClick={() => {
                 const nextMuted = !isAlarmMuted;
                 setIsAlarmMuted(nextMuted);
                 if (!nextMuted) alarmManager.playAlarm('afternoon');
               }}
-              className="px-3 py-2 rounded-xl text-xs font-semibold bg-white/80 hover:bg-white text-slate-700 border border-slate-200/80 transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+              className="px-2.5 py-1 sm:px-3 sm:py-2 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-semibold bg-white/80 hover:bg-white text-slate-700 border border-slate-200/80 transition-colors flex items-center gap-1 sm:gap-1.5 cursor-pointer shadow-xs"
               title={isAlarmMuted ? 'Bunyikan Alarm' : 'Matikan Suara Alarm'}
             >
-              {isAlarmMuted ? <VolumeX className="w-3.5 h-3.5 text-amber-500" /> : <Volume2 className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />}
-              <span>{isAlarmMuted ? 'Suara Mati' : 'Tes Bunyi'}</span>
+              {isAlarmMuted ? <VolumeX className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-500" /> : <Volume2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-600 animate-pulse" />}
+              <span>{isAlarmMuted ? 'Muted' : 'Tes Suara'}</span>
             </button>
-            <TactileButton
-              size="sm"
-              variant="amber"
-              className="ring-2 ring-amber-400/50"
+            <button
               onClick={handleAbsenPulang}
               disabled={isSubmittingPulang}
+              className="px-3 py-1 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white transition-all flex items-center gap-1 sm:gap-1.5 shadow-xs cursor-pointer active:scale-95 disabled:opacity-50"
             >
-              <CheckCircle2 size={13} strokeWidth={2.5} />
+              <CheckCircle2 size={12} strokeWidth={2.5} />
               <span>{isSubmittingPulang ? 'Menyimpan...' : 'Absen Pulang (1 Klik)'}</span>
-            </TactileButton>
+            </button>
             <button
               onClick={() => setIsAfternoonAlarmDismissed(true)}
-              className="p-2 text-slate-400 hover:text-slate-700 rounded-xl hover:bg-slate-200/60 transition cursor-pointer"
+              className="p-1 sm:p-2 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-200/60 transition cursor-pointer ml-auto sm:ml-0"
               title="Tutup Peringatan"
             >
               ×
@@ -388,274 +398,644 @@ export default function BentoDashboard({
       )}
 
       {/* =========================================================================
-          ROW 1 BENTO:
-          - CARD 1: APPLE WATCH ULTRA SMARTWATCH TIMEPIECE (Exact Image 2)
-          - CARD 2: PROFILE & PLACEMENT CARD (Teenage Engineering Playdate Aesthetic)
+          MOBILE VIEW (< sm): TINKOFF / SUPERAPP INSPIRED CARDS (Exact Screenshot)
           ========================================================================= */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+      <div className="sm:hidden space-y-3 pb-20 select-none">
+        {/* Top Header Location Bar (Like "Москва ⌵" in screenshot) */}
+        <div className="flex items-center justify-between px-1 pt-1 text-white">
+          <div className="w-8" />
+          <div 
+            onClick={onOpenSettings}
+            className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity"
+          >
+            <span className="text-xs font-bold tracking-tight text-white truncate max-w-[220px]">
+              {placeName}
+            </span>
+            <ChevronDown className="w-3.5 h-3.5 text-slate-300 shrink-0" />
+          </div>
+          <button
+            onClick={onOpenSettings}
+            className="w-8 h-8 rounded-full bg-blue-600/30 text-blue-400 flex items-center justify-center hover:bg-blue-600/50 transition-colors cursor-pointer"
+            title="Pengaturan"
+          >
+            <Sparkles className="w-4 h-4 fill-blue-400" />
+          </button>
+        </div>
 
-        {/* ===== CARD 1 (col-span-4): WATCH FACE MODULAR WIDGET (HANYA JAM, HARI, TANGGAL) ===== */}
-        <div className="lg:col-span-4 bento-card p-4 sm:p-10 flex flex-col justify-between bg-[#e5e6de] relative overflow-hidden group hover:shadow-2xl transition-all duration-500 rounded-[2.2rem] border border-black/[0.06] select-none">
-          {/* Subtle Accent Glow */}
-          <div className="absolute -top-12 -right-12 w-36 h-36 bg-orange-500/10 rounded-full blur-2xl pointer-events-none" />
+        {/* 1. Hero Banner: Soft Sky-Blue Gradient (Like "Все сервисы теперь в Городе") */}
+        <Link
+          href="/profile"
+          className="block relative overflow-hidden rounded-[1.6rem] bg-gradient-to-r from-[#4d95e8] via-[#61a5f0] to-[#73b4f6] p-4 text-white shadow-lg active:scale-[0.99] transition-transform"
+        >
+          <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/20 rounded-full blur-2xl pointer-events-none" />
 
-          {/* Top Row: Date Tile & Analog Compass Dial */}
-          <div className="grid grid-cols-2 gap-2 sm:gap-2 items-center">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1 min-w-0 pr-1">
+              <h3 className="text-sm font-bold leading-tight tracking-tight text-white">
+                Profil Siswa &amp; Penugasan
+              </h3>
+              <p className="text-[11px] text-white/90 leading-snug mt-1 line-clamp-2">
+                {studentName} · {placeName} ({defaultPlace})
+              </p>
+              <div className="mt-2.5 flex items-center gap-1.5 flex-wrap">
+                <span className="px-2 py-0.5 rounded-full bg-white/25 backdrop-blur-xs text-[9px] font-semibold text-white border border-white/20">
+                  Pembimbing: {mentorName}
+                </span>
+              </div>
+            </div>
 
-            {/* Top Left: Date Box (Hari & Tanggal) - Zen Dots Font */}
-            <div className="bg-[#1b1c20] text-white rounded-2xl sm:rounded-[1.4rem] p-3.5 sm:p-4 flex flex-col justify-center items-start shadow-md aspect-square transition-transform duration-300 group-hover:scale-[1.02]">
-              <span className="text-xs sm:text-lg font-normal text-slate-300 tracking-widest leading-none font-zen-dots uppercase">
-                {hariIni}
-              </span>
-              <span className="text-3xl sm:text-5xl xl:text-6xl font-normal text-white tracking-wider leading-none mt-1.5 sm:mt-2 font-zen-dots">
-                {dayNumber}
+            {/* Right 3D Badge */}
+            <div className="relative shrink-0 w-13 h-13 bg-white/20 backdrop-blur-md rounded-2xl p-1 border border-white/30 flex items-center justify-center shadow-md">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/assets/Profile.png"
+                alt="Profile Avatar"
+                className="w-full h-full object-contain filter drop-shadow-md"
+              />
+            </div>
+          </div>
+        </Link>
+
+        {/* 2. Row 1: Wide Card (~63%) + Narrow Card (~37%) */}
+        <div className="grid grid-cols-12 gap-2.5">
+          {/* Card A (Pink/Berry Gradient - Like "Афиша" in screenshot) */}
+          <div
+            onClick={() => router.push('/tugas')}
+            className="col-span-7 relative overflow-hidden rounded-[1.5rem] bg-gradient-to-br from-[#eb5c84] via-[#e24e77] to-[#d64069] p-3.5 text-white flex flex-col justify-between shadow-md h-[126px] active:scale-[0.99] transition-transform group cursor-pointer"
+          >
+            <div>
+              <h4 className="text-sm font-bold leading-tight">
+                Tugas Harian
+              </h4>
+              <p className="text-[10px] text-white/85 leading-tight mt-0.5 line-clamp-1">
+                {tasks.length} Catatan Kegiatan
+              </p>
+            </div>
+
+            {/* Signature Yellow Pill Badge */}
+            <div className="relative z-10">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  router.push('/tugas?new=1');
+                }}
+                className="inline-flex items-center gap-1 bg-[#ffd231] hover:bg-[#ffc814] active:scale-95 text-black font-extrabold text-[10px] px-2.5 py-1 rounded-full shadow-xs transition-transform cursor-pointer"
+              >
+                <Plus size={11} strokeWidth={3} />
+                <span>+ Tambah</span>
+              </button>
+            </div>
+
+            {/* 3D Keyboard Watermark Graphic */}
+            <div className="absolute -bottom-2 -right-2 w-20 h-16 pointer-events-none opacity-90 transition-transform group-hover:scale-105">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/assets/task-3d.png"
+                alt="Task 3D"
+                className="w-full h-full object-contain filter drop-shadow-md"
+              />
+            </div>
+          </div>
+
+          {/* Card B (Periwinkle Blue - Like "Топливо" in screenshot) */}
+          <div className="col-span-5 relative overflow-hidden rounded-[1.5rem] bg-gradient-to-br from-[#688cf6] via-[#5b7ef0] to-[#5072e6] p-3.5 text-white flex flex-col justify-between shadow-md h-[126px]">
+            <div>
+              <h4 className="text-sm font-bold leading-tight">
+                Jam PKL
+              </h4>
+              <p className="text-base font-black font-mono tracking-tight mt-0.5 text-white">
+                {hours}:{minutes}
+                <span className="text-xs text-white/70 font-normal">:{seconds}</span>
+              </p>
+            </div>
+
+            {/* Signature Yellow Pill Badge */}
+            <div className="relative z-10">
+              <span className="inline-flex items-center gap-1 bg-[#ffd231] text-black font-extrabold text-[10px] px-2 py-0.5 rounded-full shadow-xs">
+                {hariIni}, {dayNumber}
               </span>
             </div>
 
-            {/* Top Right: Analog Compass Dial Complication */}
-            <div className="flex items-center justify-center">
-              <div className="bg-[#1b1c20] rounded-full aspect-square w-full max-w-[125px] relative flex items-center justify-center shadow-md p-1 border border-white/5 transition-transform duration-300 group-hover:scale-[1.02]">
-                {/* 24 Tick Marks around perimeter */}
-                <svg viewBox="0 0 100 100" className="w-full h-full absolute inset-0">
-                  {Array.from({ length: 24 }).map((_, i) => {
-                    const angle = i * 15;
-                    const isMajor = i % 2 === 0;
-                    return (
-                      <line
-                        key={i}
-                        x1="50"
-                        y1="7"
-                        x2="50"
-                        y2={isMajor ? "16" : "12"}
-                        stroke="rgba(255,255,255,0.7)"
-                        strokeWidth={isMajor ? "2" : "1.2"}
-                        transform={`rotate(${angle} 50 50)`}
-                      />
-                    );
-                  })}
-                </svg>
+            {/* Rotating Dial Watermark Graphic */}
+            <div className="absolute -bottom-2 -right-2 w-14 h-14 pointer-events-none opacity-40">
+              <div
+                className="w-full h-full rounded-full border-2 border-white/60 flex items-center justify-center transition-transform duration-500 ease-out"
+                style={{ transform: `rotate(${dialAngle}deg)` }}
+              >
+                <div className="w-0.5 h-6 bg-white rounded-full -mt-2" />
+              </div>
+            </div>
+          </div>
+        </div>
 
-                {/* Compass/Analog Pointer arrow (rotates smoothly with seconds) */}
-                <div
-                  className="relative z-10 w-9 sm:w-10 h-9 sm:h-10 flex items-center justify-center transition-transform duration-500 ease-out"
-                  style={{ transform: `rotate(${dialAngle}deg)` }}
+        {/* 3. Row 2: 3 Square Cards (Violet, Sunny Amber, Emerald Green - Like Row 2 in screenshot) */}
+        <div className="grid grid-cols-3 gap-2.5">
+          {/* Card C (Violet/Purple) -> GOOGLE SYNC */}
+          <button
+            onClick={onSyncAll}
+            disabled={isSyncing}
+            className="relative overflow-hidden rounded-[1.4rem] bg-gradient-to-br from-[#6366f1] to-[#7c3aed] p-3 text-white flex flex-col justify-between shadow-md h-[106px] text-left active:scale-[0.98] transition-transform group cursor-pointer"
+          >
+            <div>
+              <h4 className="text-xs font-bold leading-tight">
+                Google Sync
+              </h4>
+              <p className="text-[9px] text-white/80 leading-tight mt-0.5">
+                Spreadsheet
+              </p>
+            </div>
+            <div className="relative z-10">
+              <span className="inline-flex items-center gap-0.5 bg-[#ffd231] text-black font-extrabold text-[9px] px-1.5 py-0.5 rounded-full shadow-xs">
+                {isSyncing ? 'Syncing...' : unsyncedCount > 0 ? `${unsyncedCount} Antri` : 'Sinkron'}
+              </span>
+            </div>
+            <RefreshCw className={`w-9 h-9 text-white/20 absolute -bottom-1 -right-1 pointer-events-none ${isSyncing ? 'animate-spin text-white/40' : ''}`} />
+          </button>
+
+          {/* Card D (Gold / Amber) -> LAPORAN PDF */}
+          <button
+            onClick={onOpenReport}
+            className="relative overflow-hidden rounded-[1.4rem] bg-gradient-to-br from-[#f59e0b] to-[#eab308] p-3 text-white flex flex-col justify-between shadow-md h-[106px] text-left active:scale-[0.98] transition-transform group cursor-pointer"
+          >
+            <div>
+              <h4 className="text-xs font-bold leading-tight">
+                Laporan
+              </h4>
+              <p className="text-[9px] text-white/80 leading-tight mt-0.5">
+                Format Nilai
+              </p>
+            </div>
+            <div className="relative z-10">
+              <span className="inline-flex items-center gap-0.5 bg-[#ffd231] text-black font-extrabold text-[9px] px-1.5 py-0.5 rounded-full shadow-xs">
+                Export PDF
+              </span>
+            </div>
+            <FileText className="w-9 h-9 text-white/20 absolute -bottom-1 -right-1 pointer-events-none" />
+          </button>
+
+          {/* Card E (Mint / Emerald Green) -> REKAP PRESENSI */}
+          <Link
+            href="/print-absensi"
+            className="relative overflow-hidden rounded-[1.4rem] bg-gradient-to-br from-[#10b981] to-[#059669] p-3 text-white flex flex-col justify-between shadow-md h-[106px] text-left active:scale-[0.98] transition-transform group cursor-pointer"
+          >
+            <div>
+              <h4 className="text-xs font-bold leading-tight">
+                Rekap Hadir
+              </h4>
+              <p className="text-[9px] text-white/80 leading-tight mt-0.5">
+                Daftar Bulan
+              </p>
+            </div>
+            <div className="relative z-10">
+              <span className="inline-flex items-center gap-0.5 bg-[#ffd231] text-black font-extrabold text-[9px] px-1.5 py-0.5 rounded-full shadow-xs">
+                {attendanceList.length} Hari
+              </span>
+            </div>
+            <Calendar className="w-9 h-9 text-white/20 absolute -bottom-1 -right-1 pointer-events-none" />
+          </Link>
+        </div>
+
+        {/* 4. Row 3: Narrow Card (~37%) + Wide Card (~63%) */}
+        <div className="grid grid-cols-12 gap-2.5">
+          {/* Card F (Left - Dark Graphite Carbon, col-span-5 - Like "5 букв" in screenshot) */}
+          <div className="col-span-5 relative overflow-hidden rounded-[1.5rem] bg-[#1c1e24] border border-white/10 p-3.5 text-white flex flex-col justify-between shadow-md h-[126px]">
+            <div>
+              <h4 className="text-xs font-bold text-slate-300 leading-tight">
+                Hari PKL
+              </h4>
+              <p className="text-[9px] text-slate-500 mt-0.5">
+                Sejak 3 Ags
+              </p>
+            </div>
+
+            <div className="my-auto">
+              <span className="text-3xl font-black font-zen-dots text-amber-400 leading-none">
+                {totalDaysElapsed}
+              </span>
+              <span className="text-[10px] text-slate-400 ml-1">Hari</span>
+            </div>
+
+            <div className="relative z-10">
+              <span className="inline-flex items-center gap-0.5 bg-white/10 text-slate-300 font-semibold text-[9px] px-2 py-0.5 rounded-full">
+                2026-2027
+              </span>
+            </div>
+          </div>
+
+          {/* Card G (Right - Sky Blue / Cyan, col-span-7 - Like "Путешествия" in screenshot) */}
+          <div
+            onClick={() => router.push('/absensi')}
+            className="col-span-7 relative overflow-hidden rounded-[1.5rem] bg-gradient-to-br from-[#38bdf8] via-[#0ea5e9] to-[#0284c7] p-3.5 text-white flex flex-col justify-between shadow-md h-[126px] active:scale-[0.99] transition-transform group cursor-pointer"
+          >
+            <div>
+              <h4 className="text-sm font-bold leading-tight">
+                Absensi Harian
+              </h4>
+              <p className="text-[10px] text-white/90 leading-tight mt-0.5">
+                SmartPKL &amp; Pulang
+              </p>
+            </div>
+
+            {/* Signature Yellow Pill Badge (Interactive Spotlight!) */}
+            <div className="relative z-10">
+              {!isAttendanceLoaded ? (
+                <span className="inline-flex items-center gap-1 bg-[#ffd231] text-black font-extrabold text-[10px] px-2.5 py-1 rounded-full shadow-xs">
+                  Memeriksa...
+                </span>
+              ) : !isAfterWork ? (
+                !hasCheckedIn ? (
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsSmartPKLModalOpen(true);
+                    }}
+                    className="inline-flex items-center gap-1 bg-[#ffd231] hover:bg-[#ffc814] active:scale-95 text-black font-black text-[10px] px-2.5 py-1 rounded-full shadow-xs animate-pulse cursor-pointer"
+                  >
+                    <AlertCircle size={11} strokeWidth={3} />
+                    <span>Belum Absen!</span>
+                  </button>
+                ) : (
+                  <span className="inline-flex items-center gap-1 bg-[#ffd231] text-black font-extrabold text-[10px] px-2.5 py-1 rounded-full shadow-xs">
+                    <CheckCircle2 size={11} strokeWidth={2.5} />
+                    <span>Hadir ({todayAttendance?.jamMasuk || '07:44'})</span>
+                  </span>
+                )
+              ) : !hasCheckedOut ? (
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleAbsenPulang(e);
+                  }}
+                  disabled={isSubmittingPulang}
+                  className="inline-flex items-center gap-1 bg-[#ffd231] hover:bg-[#ffc814] active:scale-95 text-black font-black text-[10px] px-2.5 py-1 rounded-full shadow-xs animate-pulse cursor-pointer disabled:opacity-50"
                 >
-                  <div className="w-1.5 h-7 sm:h-8 bg-white rounded-full flex flex-col items-center justify-start shadow-xs">
-                    {/* Arrow head */}
-                    <div className="w-3.5 sm:w-4 h-3.5 sm:h-4 border-t-2 border-r-2 border-white -rotate-45 -mt-1" />
+                  <LogOut size={11} strokeWidth={3} />
+                  <span>{isSubmittingPulang ? 'Menyimpan...' : 'Pulang (1 Klik)'}</span>
+                </button>
+              ) : (
+                <span className="inline-flex items-center gap-1 bg-[#ffd231] text-black font-extrabold text-[10px] px-2.5 py-1 rounded-full shadow-xs">
+                  <CheckCircle2 size={11} strokeWidth={2.5} />
+                  <span>Pulang ({todayAttendance?.jamPulang}) ✓</span>
+                </span>
+              )}
+            </div>
+
+            {/* 3D Smart Gadget Watermark Graphic in Bottom Right */}
+            <div className="absolute -bottom-1 -right-1 w-16 h-16 pointer-events-none opacity-90 transition-transform group-hover:scale-105">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/assets/att-3d.png"
+                alt="Attendance 3D"
+                className="w-full h-full object-contain filter drop-shadow-md"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* 5. Row 4: 3 Square Cards (Slate, Indigo, Bronze - Like Row 4 in screenshot) */}
+        <div className="grid grid-cols-3 gap-2.5">
+          {/* Card H: Settings */}
+          <button
+            onClick={onOpenSettings}
+            className="relative overflow-hidden rounded-[1.4rem] bg-gradient-to-br from-[#475569] to-[#334155] p-3 text-white flex flex-col justify-between shadow-md h-[106px] text-left active:scale-[0.98] transition-transform group cursor-pointer"
+          >
+            <div>
+              <h4 className="text-xs font-bold leading-tight">
+                Pengaturan
+              </h4>
+              <p className="text-[9px] text-white/70 leading-tight mt-0.5">
+                Konfigurasi
+              </p>
+            </div>
+            <div className="relative z-10">
+              <span className="inline-flex items-center gap-0.5 bg-[#ffd231] text-black font-extrabold text-[9px] px-1.5 py-0.5 rounded-full shadow-xs">
+                Buka Setting
+              </span>
+            </div>
+            <Settings className="w-9 h-9 text-white/15 absolute -bottom-1 -right-1 pointer-events-none" />
+          </button>
+
+          {/* Card I: SmartPKL */}
+          <button
+            onClick={() => setIsSmartPKLModalOpen(true)}
+            className="relative overflow-hidden rounded-[1.4rem] bg-gradient-to-br from-[#6366f1] to-[#4f46e5] p-3 text-white flex flex-col justify-between shadow-md h-[106px] text-left active:scale-[0.98] transition-transform group cursor-pointer"
+          >
+            <div>
+              <h4 className="text-xs font-bold leading-tight">
+                SmartPKL
+              </h4>
+              <p className="text-[9px] text-white/70 leading-tight mt-0.5">
+                Foto Selfie
+              </p>
+            </div>
+            <div className="relative z-10">
+              <span className="inline-flex items-center gap-0.5 bg-[#ffd231] text-black font-extrabold text-[9px] px-1.5 py-0.5 rounded-full shadow-xs">
+                Absen Kamera
+              </span>
+            </div>
+            <Camera className="w-9 h-9 text-white/15 absolute -bottom-1 -right-1 pointer-events-none" />
+          </button>
+
+          {/* Card J: Profile Siswa */}
+          <Link
+            href="/profile"
+            className="relative overflow-hidden rounded-[1.4rem] bg-gradient-to-br from-[#b4835a] to-[#9a683e] p-3 text-white flex flex-col justify-between shadow-md h-[106px] text-left active:scale-[0.98] transition-transform group cursor-pointer"
+          >
+            <div>
+              <h4 className="text-xs font-bold leading-tight">
+                Profil Siswa
+              </h4>
+              <p className="text-[9px] text-white/70 leading-tight mt-0.5">
+                Data Lengkap
+              </p>
+            </div>
+            <div className="relative z-10">
+              <span className="inline-flex items-center gap-0.5 bg-[#ffd231] text-black font-extrabold text-[9px] px-1.5 py-0.5 rounded-full shadow-xs">
+                NIS 2324009
+              </span>
+            </div>
+            <GraduationCap className="w-9 h-9 text-white/15 absolute -bottom-1 -right-1 pointer-events-none" />
+          </Link>
+        </div>
+
+        {/* 6. Bottom Navigation Pill (Like "Для вас  Журнал" in screenshot) */}
+        <div className="fixed bottom-3 inset-x-0 mx-auto w-fit z-40">
+          <div className="bg-[#1b1c22]/95 backdrop-blur-md border border-white/10 rounded-full px-5 py-2.5 shadow-2xl flex items-center gap-6">
+            <span className="text-xs font-bold text-white cursor-pointer flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+              Untuk Anda
+            </span>
+            <Link href="/tugas" className="text-xs font-medium text-slate-400 hover:text-white transition-colors">
+              Tugas
+            </Link>
+            <Link href="/absensi" className="text-xs font-medium text-slate-400 hover:text-white transition-colors">
+              Presensi
+            </Link>
+            <Link href="/profile" className="text-xs font-medium text-slate-400 hover:text-white transition-colors">
+              Profil
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* =========================================================================
+          DESKTOP VIEW (>= sm): ORIGINAL BENTO DASHBOARD (100% PRESERVED)
+          ========================================================================= */}
+      <div className="hidden sm:block space-y-5">
+        {/* ROW 1 BENTO: CARD 1 (col-span-4) + CARD 2 (col-span-8) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+
+          {/* ===== CARD 1: APPLE WATCH ULTRA SMARTWATCH TIMEPIECE ===== */}
+          <div className="lg:col-span-4 bento-card p-4 sm:p-10 flex flex-col justify-between bg-[#e5e6de] relative overflow-hidden group hover:shadow-2xl transition-all duration-500 rounded-[2.2rem] border border-black/[0.06] select-none">
+            <div className="absolute -top-12 -right-12 w-36 h-36 bg-orange-500/10 rounded-full blur-2xl pointer-events-none" />
+
+            {/* Top Row: Date Tile & Analog Compass Dial */}
+            <div className="grid grid-cols-2 gap-2 sm:gap-2 items-center">
+              {/* Top Left: Date Box */}
+              <div className="bg-[#1b1c20] text-white rounded-2xl sm:rounded-[1.4rem] p-3.5 sm:p-4 flex flex-col justify-center items-start shadow-md aspect-square transition-transform duration-300 group-hover:scale-[1.02]">
+                <span className="text-xs sm:text-lg font-normal text-slate-300 tracking-widest leading-none font-zen-dots uppercase">
+                  {hariIni}
+                </span>
+                <span className="text-3xl sm:text-5xl xl:text-6xl font-normal text-white tracking-wider leading-none mt-1.5 sm:mt-2 font-zen-dots">
+                  {dayNumber}
+                </span>
+              </div>
+
+              {/* Top Right: Analog Compass Dial Complication */}
+              <div className="flex items-center justify-center">
+                <div className="bg-[#1b1c20] rounded-full aspect-square w-full max-w-[125px] relative flex items-center justify-center shadow-md p-1 border border-white/5 transition-transform duration-300 group-hover:scale-[1.02]">
+                  <svg viewBox="0 0 100 100" className="w-full h-full absolute inset-0">
+                    {Array.from({ length: 24 }).map((_, i) => {
+                      const angle = i * 15;
+                      const isMajor = i % 2 === 0;
+                      return (
+                        <line
+                          key={i}
+                          x1="50"
+                          y1="7"
+                          x2="50"
+                          y2={isMajor ? "16" : "12"}
+                          stroke="rgba(255,255,255,0.7)"
+                          strokeWidth={isMajor ? "2" : "1.2"}
+                          transform={`rotate(${angle} 50 50)`}
+                        />
+                      );
+                    })}
+                  </svg>
+                  <div
+                    className="relative z-10 w-9 sm:w-10 h-9 sm:h-10 flex items-center justify-center transition-transform duration-500 ease-out"
+                    style={{ transform: `rotate(${dialAngle}deg)` }}
+                  >
+                    <div className="w-1.5 h-7 sm:h-8 bg-white rounded-full flex flex-col items-center justify-start shadow-xs">
+                      <div className="w-3.5 sm:w-4 h-3.5 sm:h-4 border-t-2 border-r-2 border-white -rotate-45 -mt-1" />
+                    </div>
+                    <div className="w-3 h-3 rounded-full bg-white absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 shadow-xs" />
                   </div>
-                  {/* Center hub */}
-                  <div className="w-3 h-3 rounded-full bg-white absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 shadow-xs" />
                 </div>
               </div>
             </div>
 
-          </div>
-
-          {/* Bottom Row: Vibrant Coral/Orange Digital Time Capsule with Seconds & Zen Dots */}
-          <div className="bg-[#ea580c] sm:bg-[#f05033] rounded-2xl sm:rounded-[1.4rem] py-3.5 sm:py-4 px-3 sm:px-4 flex items-center justify-center shadow-md mt-3 transition-transform duration-300 group-hover:scale-[1.01]">
-            <div className="flex items-center justify-center gap-1 sm:gap-1.5 font-zen-dots select-none text-neutral-950">
-              {/* Jam (Hours) */}
-              <span className="text-2xl sm:text-3xl xl:text-4xl font-normal leading-none tabular-nums tracking-wider">
-                {hours}
-              </span>
-
-              {/* Separator Titik Dua dengan pulse halus */}
-              <span className="text-xl sm:text-2xl xl:text-3xl font-normal leading-none text-neutral-950/70 -translate-y-0.5 animate-second-dot">
-                :
-              </span>
-
-              {/* Menit (Minutes) */}
-              <span className="text-2xl sm:text-3xl xl:text-4xl font-normal leading-none tabular-nums tracking-wider">
-                {minutes}
-              </span>
-
-              {/* Separator Titik Dua dengan pulse halus */}
-              <span className="text-xl sm:text-2xl xl:text-3xl font-normal leading-none text-neutral-950/70 -translate-y-0.5 animate-second-dot">
-                :
-              </span>
-
-              {/* Detik (Seconds) dengan Animasi 3D Flip Setiap Pergantian Detik */}
-              <div className="relative inline-flex items-center justify-center bg-black/10 rounded-lg sm:rounded-xl px-1.5 sm:px-2 py-0.5 border border-black/5 shadow-inner">
-                <span
-                  key={seconds}
-                  className="animate-second-flip text-2xl sm:text-3xl xl:text-4xl font-normal leading-none text-neutral-950 tabular-nums tracking-wider"
-                >
-                  {seconds}
+            {/* Bottom Row: Orange Digital Time Capsule */}
+            <div className="bg-[#ea580c] sm:bg-[#f05033] rounded-2xl sm:rounded-[1.4rem] py-3.5 sm:py-4 px-3 sm:px-4 flex items-center justify-center shadow-md mt-3 transition-transform duration-300 group-hover:scale-[1.01]">
+              <div className="flex items-center justify-center gap-1 sm:gap-1.5 font-zen-dots select-none text-neutral-950">
+                <span className="text-2xl sm:text-3xl xl:text-4xl font-normal leading-none tabular-nums tracking-wider">
+                  {hours}
                 </span>
+                <span className="text-xl sm:text-2xl xl:text-3xl font-normal leading-none text-neutral-950/70 -translate-y-0.5 animate-second-dot">
+                  :
+                </span>
+                <span className="text-2xl sm:text-3xl xl:text-4xl font-normal leading-none tabular-nums tracking-wider">
+                  {minutes}
+                </span>
+                <span className="text-xl sm:text-2xl xl:text-3xl font-normal leading-none text-neutral-950/70 -translate-y-0.5 animate-second-dot">
+                  :
+                </span>
+                <div className="relative inline-flex items-center justify-center bg-black/10 rounded-lg sm:rounded-xl px-1.5 sm:px-2 py-0.5 border border-black/5 shadow-inner">
+                  <span
+                    key={seconds}
+                    className="animate-second-flip text-2xl sm:text-3xl xl:text-4xl font-normal leading-none text-neutral-950 tabular-nums tracking-wider"
+                  >
+                    {seconds}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
+
+          {/* ===== CARD 2: PROFIL SISWA & LOKASI PENUGASAN ===== */}
+          <Link
+            href="/profile"
+            className="lg:col-span-8 bento-card p-6 sm:p-8 flex flex-col justify-between bg-white relative overflow-hidden group hover:shadow-2xl transition-all duration-500 rounded-[2.2rem] border border-black/[0.04] cursor-pointer"
+          >
+            <div className="absolute -top-16 -right-16 w-48 h-48 bg-yellow-400/10 rounded-full blur-3xl group-hover:bg-yellow-400/20 transition-all duration-700 pointer-events-none" />
+
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
+              <div className="flex-1 space-y-4 text-left">
+                <h2 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tight leading-[1.08] uppercase">
+                  {studentNameChunks.map((chunk, idx) => (
+                    <React.Fragment key={idx}>
+                      {chunk}
+                      {idx < studentNameChunks.length - 1 ? <br /> : '.'}
+                    </React.Fragment>
+                  ))}
+                </h2>
+
+                <div className="flex flex-wrap items-center gap-2 pt-2">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-emerald-50 text-emerald-800 text-[15px] font-semibold border border-emerald-100">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    {placeName}
+                  </span>
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-slate-100 text-slate-700 text-[15px] font-medium">
+                    <MapPin className="w-3 h-3 text-slate-500" />
+                    {defaultPlace}
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400 pt-1">
+                  Pembimbing: <strong className="text-slate-700 font-semibold">{mentorName}</strong>
+                </p>
+              </div>
+
+              <div className="relative shrink-0 w-36 sm:w-50 h-36 sm:h-50 flex items-center justify-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/assets/Profile.png"
+                  alt="Profile Image"
+                  className="w-full h-full object-contain filter drop-shadow-xl transition-all duration-500 ease-out group-hover:scale-110 group-hover:-translate-y-2 group-hover:rotate-2"
+                />
+              </div>
+            </div>
+
+            <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between">
+              <span className="text-[11px] text-slate-400 font-medium group-hover:text-slate-600 transition-colors">
+                Buka Halaman Profile
+              </span>
+              <span className="text-xs font-bold text-amber-500 hover:text-amber-600 inline-flex items-center gap-1 group-hover:gap-1.5 transition-all">
+                Go to page <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
+              </span>
+            </div>
+          </Link>
         </div>
 
-        {/* ===== CARD 2 (col-span-8): PROFIL SISWA & LOKASI PENUGASAN (Image 1 Style) ===== */}
-        <div className="lg:col-span-8 bento-card p-6 sm:p-8 flex flex-col justify-between bg-white relative overflow-hidden group hover:shadow-2xl transition-all duration-500 rounded-[2.2rem] border border-black/[0.04]">
-          {/* Subtle Ambient Background Glow on Hover */}
-          <div className="absolute -top-16 -right-16 w-48 h-48 bg-yellow-400/10 rounded-full blur-3xl group-hover:bg-yellow-400/20 transition-all duration-700 pointer-events-none" />
+        {/* ROW 2 BENTO: CARD 3 (Tugas) + CARD 4 (Absensi) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-stretch">
+          {/* ===== CARD 3: TUGAS HARIAN ===== */}
+          <div
+            onClick={() => router.push('/tugas')}
+            className="bento-card p-6 sm:p-8 flex flex-col justify-between bg-white relative overflow-hidden group hover:shadow-2xl transition-all duration-500 rounded-[2.2rem] border border-black/[0.04] cursor-pointer"
+          >
+            <div className="absolute -top-16 -left-16 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl group-hover:bg-emerald-500/20 transition-all duration-700 pointer-events-none" />
 
-          {/* Content Flex Row */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
-            {/* Left Column: Typography & Badges */}
-            <div className="flex-1 space-y-4 text-left">
-              <h2 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tight leading-[1.08] uppercase">
-                {studentNameChunks.map((chunk, idx) => (
-                  <React.Fragment key={idx}>
-                    {chunk}
-                    {idx < studentNameChunks.length - 1 ? <br /> : '.'}
-                  </React.Fragment>
-                ))}
-              </h2>
-              {/* <p className="text-xs text-slate-500 leading-relaxed font-normal pt-1 max-w-[320px]">
-                {schoolName} · Penugasan di {placeName} ({defaultPlace}).
-              </p> */}
-
-              {/* Badges */}
-              <div className="flex flex-wrap items-center gap-2 pt-2">
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-emerald-50 text-emerald-800 text-[15px] font-semibold border border-emerald-100">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                  {placeName}
-                </span>
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-slate-100 text-slate-700 text-[15px] font-medium">
-                  <MapPin className="w-3 h-3 text-slate-500" />
-                  {defaultPlace}
-                </span>
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
+              <div className="flex-1 space-y-2 text-left">
+                <h2 className="text-2xl sm:text-6xl font-black text-slate-900 tracking-tight leading-[0.8] uppercase">
+                  TUGAS<br />
+                  HARIAN.
+                </h2>
+                <div className="pt-3">
+                  <TactileButton
+                    size="sm"
+                    variant="amber"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      router.push('/tugas?new=1');
+                    }}
+                  >
+                    <Plus size={13} strokeWidth={2.5} />
+                    <span>Tambah Tugas</span>
+                  </TactileButton>
+                </div>
               </div>
-              <p className="text-[11px] text-slate-400 pt-1">
-                Pembimbing: <strong className="text-slate-700 font-semibold">{mentorName}</strong>
-              </p>
-            </div>
 
-            {/* Right Column: 3D Yellow Pocket Console (Playdate Style) */}
-            <div className="relative shrink-0 w-36 sm:w-50 h-36 sm:h-50 flex items-center justify-center">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/assets/Profile.png"
-                alt="Profile Image"
-                className="w-full h-full object-contain filter drop-shadow-xl transition-all duration-500 ease-out group-hover:scale-110 group-hover:-translate-y-2 group-hover:rotate-2"
-              />
-            </div>
-          </div>
-
-          {/* Bottom Action Link */}
-          <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between">
-            <span className="text-[11px] text-slate-400 font-medium">
-              Buka Halaman Profile
-            </span>
-            <span className="text-xs font-bold text-amber-500 hover:text-amber-600 inline-flex items-center gap-1 group-hover:gap-1.5 transition-all cursor-pointer">
-              Go to page <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
-            </span>
-          </div>
-        </div>
-
-      </div>
-
-      {/* =========================================================================
-          ROW 2 BENTO:
-          - CARD 3: TUGAS HARIAN (Green Mechanical Keyboard Asset from Image 1)
-          - CARD 4: ABSENSI HARIAN (Orange Rabbit R1 Asset from Image 1)
-          ========================================================================= */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-stretch">
-
-        {/* ===== CARD 3: TUGAS HARIAN (Image 1 Keyboard Card Style) ===== */}
-        <Link
-          href="/tugas"
-          className="bento-card p-6 sm:p-8 flex flex-col justify-between bg-white relative overflow-hidden group hover:shadow-2xl transition-all duration-500 rounded-[2.2rem] border border-black/[0.04] cursor-pointer"
-        >
-          {/* Subtle Ambient Background Glow on Hover */}
-          <div className="absolute -top-16 -left-16 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl group-hover:bg-emerald-500/20 transition-all duration-700 pointer-events-none" />
-
-          {/* Content Flex Row */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
-            {/* Left Column: Bold Typography & Details */}
-            <div className="flex-1 space-y-2 text-left">
-              <h2 className="text-2xl sm:text-6xl font-black text-slate-900 tracking-tight leading-[0.8] uppercase">
-                TUGAS<br />
-                HARIAN.
-              </h2>
-
-              {/* Tactile CTA — shortcut ke tambah tugas */}
-              <div className="pt-3">
-                <TactileButton
-                  size="sm"
-                  variant="amber"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    router.push('/tugas?new=1');
-                  }}
-                >
-                  <Plus size={13} strokeWidth={2.5} />
-                  <span>Tambah Tugas</span>
-                </TactileButton>
+              <div className="relative shrink-0 w-44 sm:w-56 h-40 sm:h-48 flex items-center justify-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/assets/task-3d.png"
+                  alt="3D Mechanical Keyboard"
+                  className="w-full h-full object-contain filter drop-shadow-xl transition-all duration-500 ease-out group-hover:scale-110 group-hover:-translate-y-2 group-hover:-rotate-2"
+                />
               </div>
             </div>
 
-            {/* Right Column: 3D Forest Green Mechanical Keyboard (Image 1 Style) */}
-            <div className="relative shrink-0 w-44 sm:w-56 h-40 sm:h-48 flex items-center justify-center">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/assets/task-3d.png"
-                alt="3D Mechanical Keyboard"
-                className="w-full h-full object-contain filter drop-shadow-xl transition-all duration-500 ease-out group-hover:scale-110 group-hover:-translate-y-2 group-hover:-rotate-2"
-              />
+            <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between">
+              <span className="text-[11px] text-slate-400 font-medium">
+                Buka Halaman Catatan Tugas Harian
+              </span>
+              <span className="text-xs font-bold text-amber-500 hover:text-amber-600 inline-flex items-center gap-1 group-hover:gap-1.5 transition-all">
+                Go to page <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
+              </span>
             </div>
           </div>
 
-          {/* Bottom Action Link */}
-          <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between">
-            <span className="text-[11px] text-slate-400 font-medium">
-              Buka Halaman Catatan Tugas Harian
-            </span>
-            <span className="text-xs font-bold text-amber-500 hover:text-amber-600 inline-flex items-center gap-1 group-hover:gap-1.5 transition-all">
-              Go to page <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
-            </span>
-          </div>
-        </Link>
+          {/* ===== CARD 4: ABSENSI HARIAN ===== */}
+          <div
+            onClick={() => router.push('/absensi')}
+            className="bento-card p-6 sm:p-8 flex flex-col justify-between bg-white relative overflow-hidden group hover:shadow-2xl transition-all duration-500 rounded-[2.2rem] border border-black/[0.04] cursor-pointer"
+          >
+            <div className="absolute -top-16 -right-16 w-48 h-48 bg-orange-500/10 rounded-full blur-3xl group-hover:bg-orange-500/20 transition-all duration-700 pointer-events-none" />
 
-        {/* ===== CARD 4: ABSENSI HARIAN (Image 1 Rabbit R1 Style) ===== */}
-        <div
-          onClick={() => router.push('/absensi')}
-          className="bento-card p-6 sm:p-8 flex flex-col justify-between bg-white relative overflow-hidden group hover:shadow-2xl transition-all duration-500 rounded-[2.2rem] border border-black/[0.04] cursor-pointer"
-        >
-          {/* Subtle Ambient Background Glow on Hover */}
-          <div className="absolute -top-16 -right-16 w-48 h-48 bg-orange-500/10 rounded-full blur-3xl group-hover:bg-orange-500/20 transition-all duration-700 pointer-events-none" />
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
+              <div className="flex-1 space-y-2 text-left">
+                <h2 className="text-2xl sm:text-6xl font-black text-slate-900 tracking-tight leading-[0.8] uppercase">
+                  ABSENSI<br />
+                  HARIAN.
+                </h2>
 
-          {/* Content Flex Row */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
-            {/* Left Column: Bold Typography & Details */}
-            <div className="flex-1 space-y-2 text-left">
-              <h2 className="text-2xl sm:text-6xl font-black text-slate-900 tracking-tight leading-[0.8] uppercase">
-                ABSENSI<br />
-                HARIAN.
-              </h2>
-
-              {/* 1 Single Dynamic Spotlight Button */}
-              <div className="pt-2">
-                {!isAttendanceLoaded ? (
-                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-100 text-slate-400 text-xs font-semibold animate-pulse">
-                    <span>Memeriksa presensi...</span>
-                  </div>
-                ) : !isAfterWork ? (
-                  !hasCheckedIn ? (
-                    // KONDISI 1: Belum Absen Masuk -> SPOTLIGHT bahwa kamu belum absen
-                    <div className="relative inline-flex items-center">
-                      <span className="absolute -inset-1 rounded-full bg-rose-500/35 blur-sm animate-pulse" />
+                <div className="pt-2">
+                  {!isAttendanceLoaded ? (
+                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-100 text-slate-400 text-xs font-semibold animate-pulse">
+                      <span>Memeriksa presensi...</span>
+                    </div>
+                  ) : !isAfterWork ? (
+                    !hasCheckedIn ? (
+                      <div className="relative inline-flex items-center">
+                        <span className="absolute -inset-1 rounded-full bg-rose-500/35 blur-sm animate-pulse" />
+                        <TactileButton
+                          size="md"
+                          variant="rose"
+                          className="relative ring-4 ring-rose-400/40 shadow-rose-500/30 animate-pulse hover:animate-none cursor-pointer"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setIsSmartPKLModalOpen(true);
+                          }}
+                        >
+                          <AlertCircle size={15} strokeWidth={2.5} className="animate-bounce" />
+                          <span>Kamu Belum Absen! (Absen Sekarang)</span>
+                        </TactileButton>
+                      </div>
+                    ) : (
                       <TactileButton
                         size="md"
-                        variant="rose"
-                        className="relative ring-4 ring-rose-400/40 shadow-rose-500/30 animate-pulse hover:animate-none cursor-pointer"
+                        variant="emerald"
+                        className="ring-2 ring-emerald-400/30 cursor-pointer shadow-sm hover:scale-[1.02] transition-transform"
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
-                          setIsSmartPKLModalOpen(true);
+                          router.push('/absensi');
                         }}
+                        title="Klik untuk membuka riwayat presensi"
                       >
-                        <AlertCircle size={15} strokeWidth={2.5} className="animate-bounce" />
-                        <span>Kamu Belum Absen! (Absen Sekarang)</span>
+                        <CheckCircle2 size={15} strokeWidth={2.5} />
+                        <span>Kamu sudah absen ({todayAttendance?.jamMasuk || '07:44'})</span>
+                      </TactileButton>
+                    )
+                  ) : !hasCheckedOut ? (
+                    <div className="relative inline-flex items-center">
+                      <span className="absolute -inset-1 rounded-full bg-amber-500/35 blur-sm animate-pulse" />
+                      <TactileButton
+                        size="md"
+                        variant="amber"
+                        disabled={isSubmittingPulang}
+                        className="relative ring-4 ring-amber-400/40 shadow-amber-500/30 animate-pulse hover:animate-none cursor-pointer"
+                        onClick={handleAbsenPulang}
+                      >
+                        <LogOut size={15} strokeWidth={2.5} />
+                        <span>{isSubmittingPulang ? 'Menyimpan...' : 'Absen Pulang (1 Klik)'}</span>
                       </TactileButton>
                     </div>
                   ) : (
-                    // KONDISI 2: Sudah Absen Masuk -> Tulisannya kamu sudah absen di jam sekian
                     <TactileButton
                       size="md"
                       variant="emerald"
@@ -668,66 +1048,32 @@ export default function BentoDashboard({
                       title="Klik untuk membuka riwayat presensi"
                     >
                       <CheckCircle2 size={15} strokeWidth={2.5} />
-                      <span>Kamu sudah absen ({todayAttendance?.jamMasuk || '07:44'})</span>
+                      <span>Sudah absen pulang ({todayAttendance?.jamPulang}) ✓</span>
                     </TactileButton>
-                  )
-                ) : !hasCheckedOut ? (
-                  // KONDISI 3: Jam Pulang (>= 16:00) & Belum Absen Pulang -> SPOTLIGHT berubah jadi absen pulang
-                  <div className="relative inline-flex items-center">
-                    <span className="absolute -inset-1 rounded-full bg-amber-500/35 blur-sm animate-pulse" />
-                    <TactileButton
-                      size="md"
-                      variant="amber"
-                      disabled={isSubmittingPulang}
-                      className="relative ring-4 ring-amber-400/40 shadow-amber-500/30 animate-pulse hover:animate-none cursor-pointer"
-                      onClick={handleAbsenPulang}
-                    >
-                      <LogOut size={15} strokeWidth={2.5} />
-                      <span>{isSubmittingPulang ? 'Menyimpan...' : 'Absen Pulang (1 Klik)'}</span>
-                    </TactileButton>
-                  </div>
-                ) : (
-                  // KONDISI 4: Jam Pulang & Sudah Pulang
-                  <TactileButton
-                    size="md"
-                    variant="emerald"
-                    className="ring-2 ring-emerald-400/30 cursor-pointer shadow-sm hover:scale-[1.02] transition-transform"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      router.push('/absensi');
-                    }}
-                    title="Klik untuk membuka riwayat presensi"
-                  >
-                    <CheckCircle2 size={15} strokeWidth={2.5} />
-                    <span>Sudah absen pulang ({todayAttendance?.jamPulang}) ✓</span>
-                  </TactileButton>
-                )}
+                  )}
+                </div>
+              </div>
+
+              <div className="relative shrink-0 w-36 sm:w-44 h-36 sm:h-44 flex items-center justify-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/assets/att-3d.png"
+                  alt="3D Orange Smart Gadget"
+                  className="w-full h-full object-contain filter drop-shadow-xl transition-all duration-500 ease-out group-hover:scale-110 group-hover:-translate-y-2 group-hover:rotate-2"
+                />
               </div>
             </div>
 
-            {/* Right Column: 3D Orange Rabbit R1 Device (Exact Image 1 Style) */}
-            <div className="relative shrink-0 w-36 sm:w-44 h-36 sm:h-44 flex items-center justify-center">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/assets/att-3d.png"
-                alt="3D Orange Smart Gadget"
-                className="w-full h-full object-contain filter drop-shadow-xl transition-all duration-500 ease-out group-hover:scale-110 group-hover:-translate-y-2 group-hover:rotate-2"
-              />
+            <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between">
+              <span className="text-[11px] text-slate-400 font-medium">
+                Kelola Absensi &amp; Rekap Kehadiran
+              </span>
+              <span className="text-xs font-bold text-amber-500 hover:text-amber-600 inline-flex items-center gap-1 group-hover:gap-1.5 transition-all">
+                Go to page <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
+              </span>
             </div>
           </div>
-
-          {/* Bottom Action Link */}
-          <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between">
-            <span className="text-[11px] text-slate-400 font-medium">
-              Kelola Absensi &amp; Rekap Kehadiran
-            </span>
-            <span className="text-xs font-bold text-amber-500 hover:text-amber-600 inline-flex items-center gap-1 group-hover:gap-1.5 transition-all">
-              Go to page <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
-            </span>
-          </div>
         </div>
-
       </div>
 
       {/* SmartPKL Absen Modal */}

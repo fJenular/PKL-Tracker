@@ -11,7 +11,8 @@ import {
   Layers, 
   Home, 
   ClipboardList, 
-  UserCheck 
+  UserCheck,
+  User 
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -165,22 +166,30 @@ export default function FloatingActionMenu({
           </div>
 
           {/* Quick Page Links */}
-          <div className="pt-2 border-t border-slate-100 grid grid-cols-2 gap-1.5">
+          <div className="pt-2 border-t border-slate-100 grid grid-cols-3 gap-1">
             <Link
               href="/tugas"
               onClick={() => setIsOpen(false)}
-              className="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-slate-50 hover:bg-slate-100 text-[11px] font-medium text-slate-600 transition-colors"
+              className="flex flex-col items-center justify-center gap-1 py-1.5 px-1 rounded-lg bg-slate-50 hover:bg-slate-100 text-[10px] font-medium text-slate-600 transition-colors text-center"
             >
               <ClipboardList className="w-3.5 h-3.5 text-slate-500" />
-              <span>Daftar Tugas</span>
+              <span>Tugas</span>
             </Link>
             <Link
               href="/absensi"
               onClick={() => setIsOpen(false)}
-              className="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-slate-50 hover:bg-slate-100 text-[11px] font-medium text-slate-600 transition-colors"
+              className="flex flex-col items-center justify-center gap-1 py-1.5 px-1 rounded-lg bg-slate-50 hover:bg-slate-100 text-[10px] font-medium text-slate-600 transition-colors text-center"
             >
               <UserCheck className="w-3.5 h-3.5 text-slate-500" />
               <span>Presensi</span>
+            </Link>
+            <Link
+              href="/profile"
+              onClick={() => setIsOpen(false)}
+              className="flex flex-col items-center justify-center gap-1 py-1.5 px-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-[10px] font-bold text-amber-800 transition-colors text-center border border-amber-200/50"
+            >
+              <User className="w-3.5 h-3.5 text-amber-600" />
+              <span>Profil</span>
             </Link>
           </div>
         </div>

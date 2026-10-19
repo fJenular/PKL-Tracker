@@ -1,9 +1,36 @@
 [
   {
+    "tanggal": "2026-10-19",
+    "status": "Hadir",
+    "jamMasuk": "07:37",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20261019_073734_29.jpg",
+    "createdAt": "2026-10-19T07:37:34Z"
+  },
+  {
+    "tanggal": "2026-10-19",
+    "status": "Hadir",
+    "jamMasuk": "07:21",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20261019_072119_29.jpg",
+    "createdAt": "2026-10-19T07:21:19Z"
+  },
+  {
+    "tanggal": "2026-10-16",
+    "status": "Hadir",
+    "jamMasuk": "07:11",
+    "jamPulang": "",
+    "keterangan": "Hadir di tempat PKL",
+    "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20261016_071137_29.jpg",
+    "createdAt": "2026-10-16T07:11:37Z"
+  },
+  {
     "tanggal": "2026-10-15",
     "status": "Hadir",
     "jamMasuk": "07:44",
-    "jamPulang": "",
+    "jamPulang": "16:20",
     "keterangan": "Hadir di tempat PKL",
     "fotoUrl": "https://smartpkl.smktibazma.sch.id/uploads/absensi/20261015_074412_29.jpg",
     "createdAt": "2026-10-15T07:44:12Z"

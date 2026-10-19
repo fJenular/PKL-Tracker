@@ -99,36 +99,14 @@ export default function Home() {
   const unsyncedCount = tasks.filter((t) => !t.isSyncedToSheet).length;
 
   return (
-    <div className="min-h-screen bg-[#edf0f5] relative overflow-hidden pb-24 pt-4 sm:pt-6">
+    <div className="min-h-screen bg-[#0c0d12] sm:bg-[#edf0f5] relative overflow-x-hidden p-2 sm:px-6 sm:py-6 sm:pb-24">
       {/* Background Ambient Mesh Orbs (Matching Image 1 Aesthetic) */}
       <div className="absolute -top-[15%] -left-[10%] w-[55vw] h-[55vw] rounded-full bg-gradient-to-br from-[#d4f2a7]/50 via-[#c4f7b5]/30 to-transparent blur-[120px] pointer-events-none" />
       <div className="absolute top-[20%] -right-[15%] w-[55vw] h-[55vw] rounded-full bg-gradient-to-bl from-[#b9dcfe]/50 via-[#c3d1ff]/35 to-transparent blur-[130px] pointer-events-none" />
       <div className="absolute -bottom-[10%] left-[25%] w-[45vw] h-[45vw] rounded-full bg-gradient-to-tr from-[#fed7aa]/25 via-[#ffedd5]/20 to-transparent blur-[100px] pointer-events-none" />
 
-      {/* ===== FULL EDGE-TO-EDGE TEXTLOOP RIBBON (MEMBENTANG PENUH KIRI KE KANAN LAYAR TANPA TERPOTONG) ===== */}
-      {/* <div className="w-full overflow-hidden select-none mb-2 sm:mb-3 relative -mt-10">
-        <TextLoop
-          text="Task Tracker"
-          shape="line"
-          speed={40}
-          direction="forward"
-          separator="✦"
-          curviness={90}
-          fontSize={15}
-          fontWeight={600}
-          letterSpacing={2}
-          uppercase
-          color="#ffffff"
-          ribbon
-          ribbonColor="#5227FF"
-          ribbonWidth={35}
-          pauseOnHover
-          className="w-full"
-        />
-      </div> */}
-
       {/* Main Container */}
-      <main className="min-h-screen flex flex-col justify-center max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+      <main className="w-full flex flex-col justify-center max-w-7xl mx-auto px-1 sm:px-6 lg:px-8 absolute inset-0">
         {/* Notification Toast */}
         {notification && (
           <div className="mb-5 p-4 rounded-2xl bg-white text-xs font-medium flex items-center justify-between bento-card border border-black/[0.04]">
@@ -148,12 +126,15 @@ export default function Home() {
         )}
 
         {/* ===== BENTO DASHBOARD ===== */}
-        {/* Row 1: Profile & Tempat PKL */}
-        {/* Row 2: 2 Kartu (Tugas Harian & Absensi Harian) */}
         <BentoDashboard
           tasks={tasks}
           settings={settings}
           onTaskUpdated={fetchData}
+          onOpenReport={() => setIsReportModalOpen(true)}
+          onOpenSettings={() => setIsSettingsModalOpen(true)}
+          onSyncAll={handleSyncToGoogle}
+          isSyncing={isSyncing}
+          unsyncedCount={unsyncedCount}
         />
       </main>
 

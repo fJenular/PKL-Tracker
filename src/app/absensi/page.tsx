@@ -577,7 +577,7 @@ function AbsensiContent() {
                     .filter(a => monthFilter === 'all' || getBulanFromDate(a.tanggal) === monthFilter)
                     .reverse()
                     .map((rec, idx, arr) => (
-                    <tr key={rec.tanggal} className="hover:bg-slate-50/50 transition-colors">
+                    <tr key={`${rec.tanggal}-${rec.createdAt || rec.jamMasuk || ''}-${idx}`} className="hover:bg-slate-50/50 transition-colors">
                       <td className="py-3.5 px-4 text-center font-medium text-slate-400">
                         {arr.length - idx}
                       </td>

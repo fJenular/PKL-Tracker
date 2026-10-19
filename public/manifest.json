@@ -1,0 +1,26 @@
+{
+  "name": "PKL Task Tracker - SMK TI BAZMA",
+  "short_name": "PKL Tracker",
+  "description": "Aplikasi Desktop Pencatatan Tugas & Absensi Harian PKL SMK TI BAZMA",
+  "start_url": "/",
+  "id": "/",
+  "display": "standalone",
+  "background_color": "#f2f3f7",
+  "theme_color": "#14151a",
+  "orientation": "any",
+  "categories": ["productivity", "education", "utilities"],
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
