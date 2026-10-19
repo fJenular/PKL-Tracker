@@ -202,5 +202,22 @@
     "isSyncedToSheet": true,
     "createdAt": "2026-10-15T03:59:41.603Z",
     "updatedAt": "2026-10-15T03:59:41.603Z"
+  },
+  {
+    "id": "1792389769791",
+    "no": 13,
+    "tanggal": "2026-10-19",
+    "hari": "Senin",
+    "waktu": "13:02",
+    "tugas": "tes",
+    "user": "Staf IT",
+    "tempat": "IT Operational",
+    "kendala": "-",
+    "tindakan": "-",
+    "status": "Selesai",
+    "catatan": "",
+    "isSyncedToSheet": true,
+    "createdAt": "2026-10-19T06:02:49.791Z",
+    "updatedAt": "2026-10-19T06:02:49.791Z"
   }
 ]

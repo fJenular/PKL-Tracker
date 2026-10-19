@@ -1,10 +1,100 @@
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import { Task, AppSettings, AttendanceRecord } from '@/types';
 
-const DATA_DIR = path.join(process.cwd(), 'data');
-const TASKS_FILE = path.join(DATA_DIR, 'tasks.json');
-const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
+// Bundled repo data folder (read-only in Vercel: /var/task/data)
+const BUNDLED_DATA_DIR = path.join(process.cwd(), 'data');
+
+// Detect if running on Vercel / AWS Lambda / Serverless
+const isServerless = Boolean(
+  process.env.VERCEL ||
+  process.env.AWS_LAMBDA_FUNCTION_NAME ||
+  process.env.LAMBDA_TASK_ROOT
+);
+
+// Determine writable directory (/tmp on serverless, otherwise check bundled dir)
+function getWritableDirectory(): string {
+  if (isServerless) {
+    return path.join(os.tmpdir(), 'pkl-data');
+  }
+  // For local development, check if BUNDLED_DATA_DIR is writable
+  try {
+    if (!fs.existsSync(BUNDLED_DATA_DIR)) {
+      fs.mkdirSync(BUNDLED_DATA_DIR, { recursive: true });
+    }
+    const testFile = path.join(BUNDLED_DATA_DIR, '.write_test');
+    fs.writeFileSync(testFile, 'ok');
+    fs.unlinkSync(testFile);
+    return BUNDLED_DATA_DIR;
+  } catch {
+    return path.join(os.tmpdir(), 'pkl-data');
+  }
+}
+
+const WRITABLE_DATA_DIR = getWritableDirectory();
+
+function ensureWritableDir() {
+  try {
+    if (!fs.existsSync(WRITABLE_DATA_DIR)) {
+      fs.mkdirSync(WRITABLE_DATA_DIR, { recursive: true });
+    }
+  } catch (err) {
+    console.warn(`[storage] Could not create directory ${WRITABLE_DATA_DIR}:`, err);
+  }
+}
+
+function readDataFile<T>(filename: string, fallback: T): T {
+  const writablePath = path.join(/* turbopackIgnore: true */ WRITABLE_DATA_DIR, filename);
+  const bundledPath = path.join(BUNDLED_DATA_DIR, filename);
+
+  // 1. Try reading from writable location first (has latest user edits)
+  if (fs.existsSync(/* turbopackIgnore: true */ writablePath)) {
+    try {
+      const raw = fs.readFileSync(/* turbopackIgnore: true */ writablePath, 'utf-8');
+      return JSON.parse(raw);
+    } catch (err) {
+      console.error(`[storage] Error reading ${writablePath}:`, err);
+    }
+  }
+
+  // 2. Try reading from bundled repo location (initial template data)
+  if (fs.existsSync(bundledPath)) {
+    try {
+      const raw = fs.readFileSync(bundledPath, 'utf-8');
+      const data = JSON.parse(raw);
+      // Initialize writable store so subsequent writes don't lose initial data
+      writeDataFile(filename, data);
+      return data;
+    } catch (err) {
+      console.error(`[storage] Error reading bundled ${bundledPath}:`, err);
+    }
+  }
+
+  // 3. Fallback to hardcoded default and persist to writable dir
+  writeDataFile(filename, fallback);
+  return fallback;
+}
+
+function writeDataFile<T>(filename: string, data: T): void {
+  ensureWritableDir();
+  const writablePath = path.join(/* turbopackIgnore: true */ WRITABLE_DATA_DIR, filename);
+  try {
+    fs.writeFileSync(writablePath, JSON.stringify(data, null, 2), 'utf-8');
+  } catch (err) {
+    console.error(`[storage] Error writing to ${writablePath}:`, err);
+  }
+
+  // Also write to bundled data dir if local development and not serverless
+  if (!isServerless && WRITABLE_DATA_DIR !== BUNDLED_DATA_DIR) {
+    try {
+      const bundledPath = path.join(BUNDLED_DATA_DIR, filename);
+      fs.writeFileSync(bundledPath, JSON.stringify(data, null, 2), 'utf-8');
+    } catch {
+      // Ignored if bundled dir is read-only
+    }
+  }
+}
 
 const DEFAULT_SETTINGS: AppSettings = {
   profile: {
@@ -30,7 +120,6 @@ const DEFAULT_SETTINGS: AppSettings = {
   smartpkl: {
     username: '2324009',
     password: '123456',
-    // Yayasan Kesehatan Pertamina Simprug coordinates (approximate)
     officeLatitude: -6.2254,
     officeLongitude: 106.7977,
     isConfigured: true
@@ -91,72 +180,39 @@ const DEFAULT_TASKS: Task[] = [
   }
 ];
 
-function ensureDir() {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-  }
-}
-
 export function getTasks(): Task[] {
-  ensureDir();
-  if (!fs.existsSync(TASKS_FILE)) {
-    fs.writeFileSync(TASKS_FILE, JSON.stringify(DEFAULT_TASKS, null, 2), 'utf-8');
-    return DEFAULT_TASKS;
-  }
-  try {
-    const raw = fs.readFileSync(TASKS_FILE, 'utf-8');
-    return JSON.parse(raw);
-  } catch (err) {
-    console.error('Error reading tasks file:', err);
-    return DEFAULT_TASKS;
-  }
+  return readDataFile<Task[]>('tasks.json', DEFAULT_TASKS);
 }
 
 export function saveTasks(tasks: Task[]): void {
-  ensureDir();
-  fs.writeFileSync(TASKS_FILE, JSON.stringify(tasks, null, 2), 'utf-8');
+  writeDataFile<Task[]>('tasks.json', tasks);
 }
 
 export function getSettings(): AppSettings {
-  ensureDir();
-  if (!fs.existsSync(SETTINGS_FILE)) {
-    // If environment variables exist, pre-fill them
-    const envEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || '';
-    const envKey = process.env.GOOGLE_PRIVATE_KEY || '';
-    const envSheetId = process.env.GOOGLE_SPREADSHEET_ID || DEFAULT_SETTINGS.google.spreadsheetId;
-    const settings = {
-      ...DEFAULT_SETTINGS,
-      google: {
-        ...DEFAULT_SETTINGS.google,
-        spreadsheetId: envSheetId,
-        serviceAccountEmail: envEmail,
-        privateKey: envKey,
-        isConfigured: !!(envEmail && envKey && envSheetId)
-      }
-    };
-    fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2), 'utf-8');
-    return settings;
-  }
-  try {
-    const raw = fs.readFileSync(SETTINGS_FILE, 'utf-8');
-    const parsed = JSON.parse(raw);
-    return {
-      profile: { ...DEFAULT_SETTINGS.profile, ...(parsed.profile || {}) },
-      google: { ...DEFAULT_SETTINGS.google, ...(parsed.google || {}) },
-      smartpkl: { ...DEFAULT_SETTINGS.smartpkl, ...(parsed.smartpkl || {}) }
-    };
-  } catch (err) {
-    console.error('Error reading settings file:', err);
-    return DEFAULT_SETTINGS;
-  }
+  const settings = readDataFile<AppSettings>('settings.json', DEFAULT_SETTINGS);
+
+  // If environment variables exist, override/supplement
+  const envEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || '';
+  const envKey = process.env.GOOGLE_PRIVATE_KEY || '';
+  const envSheetId = process.env.GOOGLE_SPREADSHEET_ID || settings.google.spreadsheetId || DEFAULT_SETTINGS.google.spreadsheetId;
+
+  return {
+    profile: { ...DEFAULT_SETTINGS.profile, ...(settings.profile || {}) },
+    google: {
+      ...DEFAULT_SETTINGS.google,
+      ...(settings.google || {}),
+      spreadsheetId: envSheetId,
+      serviceAccountEmail: envEmail || settings.google.serviceAccountEmail,
+      privateKey: envKey || settings.google.privateKey,
+      isConfigured: settings.google.isConfigured || !!(envEmail && envKey && envSheetId)
+    },
+    smartpkl: { ...DEFAULT_SETTINGS.smartpkl, ...(settings.smartpkl || {}) }
+  };
 }
 
 export function saveSettings(settings: AppSettings): void {
-  ensureDir();
-  fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2), 'utf-8');
+  writeDataFile<AppSettings>('settings.json', settings);
 }
-
-const ATTENDANCE_FILE = path.join(DATA_DIR, 'attendance.json');
 
 const DEFAULT_ATTENDANCE: AttendanceRecord[] = [
   {
@@ -176,22 +232,9 @@ const DEFAULT_ATTENDANCE: AttendanceRecord[] = [
 ];
 
 export function getAttendance(): AttendanceRecord[] {
-  ensureDir();
-  if (!fs.existsSync(ATTENDANCE_FILE)) {
-    fs.writeFileSync(ATTENDANCE_FILE, JSON.stringify(DEFAULT_ATTENDANCE, null, 2), 'utf-8');
-    return DEFAULT_ATTENDANCE;
-  }
-  try {
-    const raw = fs.readFileSync(ATTENDANCE_FILE, 'utf-8');
-    return JSON.parse(raw);
-  } catch (err) {
-    console.error('Error reading attendance file:', err);
-    return DEFAULT_ATTENDANCE;
-  }
+  return readDataFile<AttendanceRecord[]>('attendance.json', DEFAULT_ATTENDANCE);
 }
 
 export function saveAttendance(records: AttendanceRecord[]): void {
-  ensureDir();
-  fs.writeFileSync(ATTENDANCE_FILE, JSON.stringify(records, null, 2), 'utf-8');
+  writeDataFile<AttendanceRecord[]>('attendance.json', records);
 }
-
