@@ -1,4 +1,4 @@
-# PKL Task Tracker - SMK TI BAZMA x Yayasan Kesehatan Pertamina
+# PKL Task Tracker 
 
 Aplikasi pelacak tugas & kegiatan harian Praktik Kerja Lapangan (PKL) yang terintegrasi secara otomatis dengan **Google Spreadsheet** dan **Export Laporan PDF** berbasis template resmi dokumen **SMK TI BAZMA**.
 
