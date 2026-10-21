@@ -52,6 +52,7 @@ function TugasContent() {
 
   // Synchronization status
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isPulling, setIsPulling] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
 
   const showNotification = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
@@ -129,7 +130,7 @@ function TugasContent() {
     }
   };
 
-  // Delete task
+  // Delete single task
   const handleDeleteTask = async (id: string) => {
     if (!confirm('Apakah Anda yakin ingin menghapus tugas ini?')) return;
     try {
@@ -144,6 +145,35 @@ function TugasContent() {
       }
     } catch (err: any) {
       showNotification(err.message || 'Gagal menghapus tugas', 'error');
+    }
+  };
+
+  // Delete multiple selected tasks
+  const handleDeleteSelected = async () => {
+    if (selectedTaskIds.length === 0) return;
+    if (!confirm(`Apakah Anda yakin ingin menghapus ${selectedTaskIds.length} tugas yang dipilih?`)) return;
+    let deletedCount = 0;
+    let failedCount = 0;
+    const idsToDelete = [...selectedTaskIds];
+    for (const id of idsToDelete) {
+      try {
+        const res = await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) {
+          deletedCount++;
+          setTasks((prev) => prev.filter((t) => t.id !== id));
+          setSelectedTaskIds((prev) => prev.filter((tid) => tid !== id));
+        } else {
+          failedCount++;
+        }
+      } catch {
+        failedCount++;
+      }
+    }
+    if (failedCount === 0) {
+      showNotification(`${deletedCount} tugas berhasil dihapus.`, 'info');
+    } else {
+      showNotification(`${deletedCount} dihapus, ${failedCount} gagal.`, 'error');
     }
   };
 
@@ -174,6 +204,44 @@ function TugasContent() {
         if (refreshRes.success) setTasks(refreshRes.data);
       } else {
         showNotification(data.message, 'error');
+      }
+    } catch (err: any) {
+      showNotification(err.message || 'Sinkronisasi gagal', 'error');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  // Pull latest tasks from Google Spreadsheet & merge with local database
+  const handlePullFromGoogle = async () => {
+    try {
+      setIsPulling(true);
+      const res = await fetch('/api/google/pull', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        showNotification(data.message, 'success');
+        if (data.data) setTasks(data.data);
+      } else {
+        showNotification(data.message || 'Gagal menarik data dari Google Spreadsheet', 'error');
+      }
+    } catch (err: any) {
+      showNotification(err.message || 'Gagal menarik data dari Google Spreadsheet', 'error');
+    } finally {
+      setIsPulling(false);
+    }
+  };
+
+  // Clean full sync all local tasks into Google Spreadsheet
+  const handleSyncAllToGoogle = async () => {
+    try {
+      setIsSyncing(true);
+      const res = await fetch('/api/google/sync-all', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        showNotification(data.message, 'success');
+        if (data.data) setTasks(data.data);
+      } else {
+        showNotification(data.message || 'Sinkronisasi gagal', 'error');
       }
     } catch (err: any) {
       showNotification(err.message || 'Sinkronisasi gagal', 'error');
@@ -252,12 +320,23 @@ function TugasContent() {
 
           <div className="flex flex-wrap items-center gap-2">
             <button
-              onClick={() => handleSyncToGoogle()}
+              onClick={handlePullFromGoogle}
+              disabled={isPulling}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-2xs transition-colors cursor-pointer disabled:opacity-50"
+              title="Tarik data tugas terbaru dari Google Spreadsheet ke aplikasi"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 text-emerald-600 ${isPulling ? 'animate-spin' : ''}`} />
+              <span>{isPulling ? 'Menarik...' : 'Tarik dari Sheet'}</span>
+            </button>
+
+            <button
+              onClick={handleSyncAllToGoogle}
               disabled={isSyncing}
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-2xs transition-colors cursor-pointer disabled:opacity-50"
+              title="Rapikan & sinkronkan seluruh tugas ke Google Spreadsheet"
             >
               <RefreshCw className={`w-3.5 h-3.5 text-emerald-600 ${isSyncing ? 'animate-spin' : ''}`} />
-              <span>{isSyncing ? 'Menyinkronkan...' : 'Sinkron Sheet'}</span>
+              <span>{isSyncing ? 'Menyinkronkan...' : 'Sinkronkan Semua'}</span>
             </button>
 
             <button
@@ -435,6 +514,10 @@ function TugasContent() {
           }}
           onSyncSelected={() => handleSyncToGoogle(selectedTaskIds)}
           isSyncing={isSyncing}
+          onPullFromSheet={handlePullFromGoogle}
+          isPulling={isPulling}
+          onSyncAllToSheet={handleSyncAllToGoogle}
+          onDeleteSelected={handleDeleteSelected}
         />
       </main>
 
@@ -445,8 +528,10 @@ function TugasContent() {
           setReportExportParams({});
           setIsReportModalOpen(true);
         }}
-        onSyncAll={() => handleSyncToGoogle()}
+        onSyncAll={handleSyncAllToGoogle}
+        onPullFromGoogle={handlePullFromGoogle}
         isSyncing={isSyncing}
+        isPulling={isPulling}
         unsyncedCount={unsyncedCount}
       />
 

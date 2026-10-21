@@ -21,7 +21,9 @@ interface FloatingActionMenuProps {
   onOpenGuide: () => void;
   onOpenReport?: () => void;
   onSyncAll?: () => void;
+  onPullFromGoogle?: () => void;
   isSyncing?: boolean;
+  isPulling?: boolean;
   unsyncedCount?: number;
 }
 
@@ -30,7 +32,9 @@ export default function FloatingActionMenu({
   onOpenGuide,
   onOpenReport,
   onSyncAll,
+  onPullFromGoogle,
   isSyncing = false,
+  isPulling = false,
   unsyncedCount = 0
 }: FloatingActionMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -140,7 +144,31 @@ export default function FloatingActionMenu({
               </button>
             )}
 
-            {/* Opsi 4: Sinkronkan Google Sheets */}
+            {/* Opsi 4: Tarik dari Google Sheets */}
+            {onPullFromGoogle && (
+              <button
+                onClick={() => {
+                  setIsOpen(false);
+                  onPullFromGoogle();
+                }}
+                disabled={isPulling}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 transition-colors group cursor-pointer disabled:opacity-50"
+              >
+                <div className="w-8 h-8 rounded-lg bg-emerald-100/70 text-emerald-700 flex items-center justify-center shrink-0 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                  <RefreshCw className={`w-4 h-4 ${isPulling ? 'animate-spin' : ''}`} />
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs font-semibold leading-tight">
+                    {isPulling ? 'Menarik data...' : 'Tarik dari Spreadsheet'}
+                  </p>
+                  <p className="text-[10px] text-slate-400 leading-tight mt-0.5">
+                    Ambil data tugas terbaru dari Google Sheets
+                  </p>
+                </div>
+              </button>
+            )}
+
+            {/* Opsi 5: Sinkronkan Google Sheets */}
             {onSyncAll && (
               <button
                 onClick={() => {
@@ -148,9 +176,9 @@ export default function FloatingActionMenu({
                   onSyncAll();
                 }}
                 disabled={isSyncing}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 transition-colors group cursor-pointer disabled:opacity-50"
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left hover:bg-slate-50 text-slate-700 hover:text-slate-900 transition-colors group cursor-pointer disabled:opacity-50"
               >
-                <div className="w-8 h-8 rounded-lg bg-emerald-100/70 text-emerald-700 flex items-center justify-center shrink-0 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center shrink-0 group-hover:bg-slate-800 group-hover:text-white transition-colors">
                   <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
                 </div>
                 <div className="flex-1">

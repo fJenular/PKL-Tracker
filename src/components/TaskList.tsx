@@ -35,6 +35,10 @@ interface TaskListProps {
   onExportFiltered?: (filteredTasks: Task[], filterInfo: { month: string; dateFrom: string; dateTo: string; label: string }) => void;
   onSyncSelected: () => void;
   isSyncing: boolean;
+  onPullFromSheet?: () => void;
+  isPulling?: boolean;
+  onSyncAllToSheet?: () => void;
+  onDeleteSelected?: () => void;
 }
 
 export default function TaskList({
@@ -48,7 +52,11 @@ export default function TaskList({
   onExportSelected,
   onExportFiltered,
   onSyncSelected,
-  isSyncing
+  isSyncing,
+  onPullFromSheet,
+  isPulling = false,
+  onSyncAllToSheet,
+  onDeleteSelected
 }: TaskListProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -359,7 +367,31 @@ export default function TaskList({
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {onPullFromSheet && (
+              <button
+                onClick={onPullFromSheet}
+                disabled={isPulling}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/80 transition-colors cursor-pointer disabled:opacity-50"
+                title="Tarik data terbaru dari Google Spreadsheet ke aplikasi"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 text-emerald-600 ${isPulling ? 'animate-spin' : ''}`} />
+                <span>{isPulling ? 'Menarik...' : 'Tarik dari Sheet'}</span>
+              </button>
+            )}
+
+            {onSyncAllToSheet && (
+              <button
+                onClick={onSyncAllToSheet}
+                disabled={isSyncing}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-2xs transition-colors cursor-pointer disabled:opacity-50"
+                title="Rapikan & sinkronkan seluruh data aplikasi ke Google Spreadsheet"
+              >
+                <Sheet className="w-3.5 h-3.5 text-emerald-600" />
+                <span>{isSyncing ? 'Sinkron...' : 'Sinkronkan Semua'}</span>
+              </button>
+            )}
+
             <button
               onClick={handleExportFilteredClick}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200/80 text-slate-700 transition-colors cursor-pointer"
@@ -374,11 +406,22 @@ export default function TaskList({
 
       {/* Selected Action Bar (Active when items are selected) */}
       {selectedTaskIds.length > 0 && (
-        <div className="bg-emerald-50/90 border-b border-emerald-100/60 px-6 py-3 flex items-center justify-between">
-          <span className="text-xs font-semibold text-emerald-950">
+        <div className="bg-emerald-50/90 border-b border-emerald-100/60 px-6 py-3 flex items-center justify-between gap-2">
+          <span className="text-xs font-semibold text-emerald-950 shrink-0">
             {selectedTaskIds.length} tugas dipilih
           </span>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {onDeleteSelected && (
+              <button
+                onClick={onDeleteSelected}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-200/80 hover:bg-red-100 shadow-2xs transition-colors cursor-pointer"
+                title="Hapus semua tugas yang dipilih"
+              >
+                <Trash2 className="w-3.5 h-3.5 text-red-600" />
+                <span>Hapus ({selectedTaskIds.length})</span>
+              </button>
+            )}
+
             <button
               onClick={onSyncSelected}
               disabled={isSyncing}

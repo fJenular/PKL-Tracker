@@ -27,6 +27,7 @@ import SettingsModal from '@/components/SettingsModal';
 import GoogleGuideModal from '@/components/GoogleGuideModal';
 import ReportModal from '@/components/ReportModal';
 import SmartPKLAbsenModal from '@/components/SmartPKLAbsenModal';
+import ClockOutSelfieModal from '@/components/ClockOutSelfieModal';
 import AttendanceReportModal from '@/components/AttendanceReportModal';
 import { AttendanceRecord, AppSettings, Task } from '@/types';
 import { formatDateToIndonesian, getHariFromDate, getCurrentDateString, getCurrentTimeString, getBulanFromDate } from '@/lib/dateUtils';
@@ -45,7 +46,7 @@ function AbsensiContent() {
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [isAttendanceReportModalOpen, setIsAttendanceReportModalOpen] = useState(false);
   const [isSmartPKLModalOpen, setIsSmartPKLModalOpen] = useState(false);
-  const [isSubmittingPulang, setIsSubmittingPulang] = useState(false);
+  const [isClockOutModalOpen, setIsClockOutModalOpen] = useState(false);
   const [isSyncingSmartPKL, setIsSyncingSmartPKL] = useState(false);
   const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
 
@@ -74,7 +75,31 @@ function AbsensiContent() {
         fetch('/api/tasks').then((r) => r.json())
       ]);
       if (attRes.success && Array.isArray(attRes.data)) {
-        setAttendanceList(attRes.data);
+        let mergedList = [...attRes.data];
+        try {
+          const stored = JSON.parse(localStorage.getItem('attendance_clockout') || '{}');
+          Object.keys(stored).forEach((dateKey) => {
+            const localData = stored[dateKey];
+            const idx = mergedList.findIndex((r) => r.tanggal === dateKey);
+            if (idx >= 0) {
+              if (!mergedList[idx].jamPulang && localData.jamPulang) {
+                mergedList[idx] = { ...mergedList[idx], jamPulang: localData.jamPulang, selfieClockOut: true };
+              }
+            } else if (localData.jamPulang) {
+              mergedList.push({
+                tanggal: dateKey,
+                status: localData.status || 'Hadir',
+                jamMasuk: localData.jamMasuk || '07:45',
+                jamPulang: localData.jamPulang,
+                keterangan: localData.keterangan || 'Presensi PKL Hari Ini',
+                selfieClockOut: true,
+              });
+            }
+          });
+        } catch {
+          // ignore
+        }
+        setAttendanceList(mergedList);
       }
       if (setRes.success) setSettings(setRes.data);
       if (tasksRes.success) setTasks(tasksRes.data);
@@ -98,44 +123,7 @@ function AbsensiContent() {
   const hasCheckedIn = Boolean(todayRecord && todayRecord.jamMasuk && todayRecord.jamMasuk !== '-');
   const hasCheckedOut = Boolean(todayRecord?.jamPulang && todayRecord.jamPulang !== '-' && todayRecord.jamPulang !== '');
 
-  // 1-Click Absen Pulang (Tanpa Akses Kamera)
-  const handleAbsenPulang = async () => {
-    if (isSubmittingPulang) return;
-    try {
-      setIsSubmittingPulang(true);
-      const jamStr = getCurrentTimeString();
 
-      fetch('/api/smartpkl', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'pulang', jamPulang: jamStr }),
-      }).catch(console.error);
-
-      const res = await fetch('/api/attendance', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tanggal: todayStr,
-          status: todayRecord?.status || 'Hadir',
-          jamMasuk: todayRecord?.jamMasuk || '08:00',
-          jamPulang: jamStr,
-          keterangan: todayRecord?.keterangan || 'Presensi PKL Hari Ini',
-        }),
-      });
-
-      const data = await res.json();
-      if (data.success) {
-        showNotification(`Berhasil Absen Pulang pukul ${jamStr} WIB! 🎉`, 'success');
-        fetchAttendance();
-      } else {
-        showNotification(data.message || 'Gagal mencatat absen pulang.', 'error');
-      }
-    } catch (e: any) {
-      showNotification('Terjadi kesalahan saat memproses absen pulang.', 'error');
-    } finally {
-      setIsSubmittingPulang(false);
-    }
-  };
 
   // Sinkronisasi data riwayat dari SmartPKL
   const handleSyncSmartPKL = async () => {
@@ -285,12 +273,11 @@ function AbsensiContent() {
               </button>
             ) : !hasCheckedOut ? (
               <button
-                onClick={handleAbsenPulang}
-                disabled={isSubmittingPulang}
+                onClick={() => setIsClockOutModalOpen(true)}
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-amber-500 hover:bg-amber-600 text-white shadow-xs transition-all cursor-pointer hover:shadow-sm"
               >
-                <LogOut className="w-3.5 h-3.5" />
-                <span>{isSubmittingPulang ? 'Menyimpan...' : 'Absen Pulang (1 Klik)'}</span>
+                <Camera className="w-3.5 h-3.5" />
+                <span>Selfie Absen Pulang</span>
               </button>
             ) : (
               <span className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
@@ -349,17 +336,16 @@ function AbsensiContent() {
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-800 uppercase">Jam 16:00+</span>
                 </h4>
                 <p className="text-xs text-slate-600 mt-0.5">
-                  Jam kerja PKL telah selesai. Klik tombol di samping untuk konfirmasi pulang tanpa kamera.
+                  Jam kerja PKL telah selesai. Lakukan selfie absen pulang (hanya tersimpan di aplikasi) untuk konfirmasi kepulangan.
                 </p>
               </div>
             </div>
             <button
-              onClick={handleAbsenPulang}
-              disabled={isSubmittingPulang}
+              onClick={() => setIsClockOutModalOpen(true)}
               className="w-full sm:w-auto px-4 py-2 rounded-xl text-xs font-bold text-white bg-amber-500 hover:bg-amber-600 flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer"
             >
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>{isSubmittingPulang ? 'Menyimpan...' : 'Absen Pulang (1 Klik)'}</span>
+              <Camera className="w-3.5 h-3.5" />
+              <span>Selfie Absen Pulang</span>
             </button>
           </div>
         )}
@@ -784,6 +770,19 @@ function AbsensiContent() {
           showNotification('Absensi SmartPKL berhasil dikirim! ✅', 'success');
           fetchAttendance();
         }}
+      />
+
+      <ClockOutSelfieModal
+        isOpen={isClockOutModalOpen}
+        onClose={() => setIsClockOutModalOpen(false)}
+        onSuccess={(jamPulang) => {
+          showNotification(`Selfie absen pulang pukul ${jamPulang} WIB berhasil dicatat! 🎉`, 'success');
+          fetchAttendance();
+        }}
+        todayDate={todayStr}
+        jamMasuk={todayRecord?.jamMasuk || '07:45'}
+        status={todayRecord?.status || 'Hadir'}
+        keterangan={todayRecord?.keterangan || 'Presensi PKL Hari Ini'}
       />
 
       {/* Settings & Guide Modals */}

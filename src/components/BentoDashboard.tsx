@@ -34,6 +34,7 @@ import { formatDateToIndonesian, getHariFromDate, getCurrentDateString } from '@
 import { ArrowRightIcon } from "@phosphor-icons/react/dist/ssr";
 import { TactileButton } from "@/components/TactileButton";
 import SmartPKLAbsenModal from "@/components/SmartPKLAbsenModal";
+import ClockOutSelfieModal from "@/components/ClockOutSelfieModal";
 import { alarmManager } from "@/lib/alarmAudio";
 
 interface BentoDashboardProps {
@@ -74,7 +75,7 @@ export default function BentoDashboard({
 
   // SmartPKL & Absen Pulang states
   const [isSmartPKLModalOpen, setIsSmartPKLModalOpen] = useState(false);
-  const [isSubmittingPulang, setIsSubmittingPulang] = useState(false);
+  const [isClockOutModalOpen, setIsClockOutModalOpen] = useState(false);
   const [pulangSuccessMsg, setPulangSuccessMsg] = useState<string | null>(null);
 
   // Alarm states (Pagi: 07:30 - 08:00, Pulang: 16:00)
@@ -124,9 +125,33 @@ export default function BentoDashboard({
       const res = await fetch('/api/attendance');
       const data = await res.json();
       if (data.success && Array.isArray(data.data)) {
-        setAttendanceList(data.data);
+        let mergedList = [...data.data];
+        try {
+          const stored = JSON.parse(localStorage.getItem('attendance_clockout') || '{}');
+          Object.keys(stored).forEach((dateKey) => {
+            const localData = stored[dateKey];
+            const idx = mergedList.findIndex((r) => r.tanggal === dateKey);
+            if (idx >= 0) {
+              if (!mergedList[idx].jamPulang && localData.jamPulang) {
+                mergedList[idx] = { ...mergedList[idx], jamPulang: localData.jamPulang, selfieClockOut: true };
+              }
+            } else if (localData.jamPulang) {
+              mergedList.push({
+                tanggal: dateKey,
+                status: localData.status || 'Hadir',
+                jamMasuk: localData.jamMasuk || '07:45',
+                jamPulang: localData.jamPulang,
+                keterangan: localData.keterangan || 'Presensi PKL Hari Ini',
+                selfieClockOut: true,
+              });
+            }
+          });
+        } catch {
+          // ignore
+        }
+        setAttendanceList(mergedList);
         const todayKey = currentDateStr || getCurrentDateString();
-        const todayRec = data.data.find((r: AttendanceRecord) => r.tanggal === todayKey);
+        const todayRec = mergedList.find((r: AttendanceRecord) => r.tanggal === todayKey);
         setTodayAttendance(todayRec || null);
       }
     } catch (e) {
@@ -218,54 +243,21 @@ export default function BentoDashboard({
     }
   }, [isAfternoonAlarmActive, hasPlayedAfternoonAlarm, isAlarmMuted, isAfternoonAlarmDismissed]);
 
-  // 1-Click Absen Pulang (Tanpa Akses Kamera)
-  const handleAbsenPulang = async (e?: React.MouseEvent) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    if (isSubmittingPulang) return;
+  // Buka modal selfie absen pulang
+  const handleOpenClockOut = (e?: React.MouseEvent) => {
+    if (e) { e.preventDefault(); e.stopPropagation(); }
+    setIsClockOutModalOpen(true);
+  };
 
-    try {
-      setIsSubmittingPulang(true);
-      const now = new Date();
-      const jamStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
-
-      // 1. Notify smartpkl proxy
-      fetch('/api/smartpkl', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'pulang', jamPulang: jamStr }),
-      }).catch(console.error);
-
-      // 2. Save/update local attendance record
-      const res = await fetch('/api/attendance', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tanggal: currentDateStr,
-          status: todayAttendance?.status || 'Hadir',
-          jamMasuk: todayAttendance?.jamMasuk || '08:00',
-          jamPulang: jamStr,
-          keterangan: todayAttendance?.keterangan || 'Presensi PKL Hari Ini',
-        }),
-      });
-
-      const data = await res.json();
-      if (data.success) {
-        await fetchAttendance();
-        onTaskUpdated?.();
-        setPulangSuccessMsg(`Berhasil Absen Pulang pukul ${jamStr} WIB! Selamat beristirahat 🎉`);
-        setTimeout(() => setPulangSuccessMsg(null), 6000);
-      } else {
-        alert(data.message || 'Gagal menyimpan absensi pulang.');
-      }
-    } catch (err: any) {
-      console.error('Error saat absen pulang:', err);
-      alert('Terjadi kesalahan saat memproses absen pulang.');
-    } finally {
-      setIsSubmittingPulang(false);
-    }
+  // Dipanggil setelah selfie absen pulang berhasil
+  const handleClockOutSuccess = async (jamPulang: string) => {
+    setIsClockOutModalOpen(false);
+    // Hentikan alarm pulang
+    alarmManager.stopAlarm('afternoon');
+    await fetchAttendance();
+    onTaskUpdated?.();
+    setPulangSuccessMsg(`Selfie absen pulang pukul ${jamPulang} WIB berhasil! Selamat beristirahat 🎉`);
+    setTimeout(() => setPulangSuccessMsg(null), 7000);
   };
 
   return (
@@ -331,7 +323,7 @@ export default function BentoDashboard({
               <span>Absen Masuk Sekarang</span>
             </button>
             <button
-              onClick={() => setIsMorningAlarmDismissed(true)}
+              onClick={() => { setIsMorningAlarmDismissed(true); alarmManager.stopAlarm('morning'); }}
               className="p-1 sm:p-2 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-200/60 transition cursor-pointer ml-auto sm:ml-0"
               title="Tutup Peringatan"
             >
@@ -379,15 +371,14 @@ export default function BentoDashboard({
               <span>{isAlarmMuted ? 'Muted' : 'Tes Suara'}</span>
             </button>
             <button
-              onClick={handleAbsenPulang}
-              disabled={isSubmittingPulang}
-              className="px-3 py-1 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white transition-all flex items-center gap-1 sm:gap-1.5 shadow-xs cursor-pointer active:scale-95 disabled:opacity-50"
+              onClick={handleOpenClockOut}
+              className="px-3 py-1 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white transition-all flex items-center gap-1 sm:gap-1.5 shadow-xs cursor-pointer active:scale-95"
             >
-              <CheckCircle2 size={12} strokeWidth={2.5} />
-              <span>{isSubmittingPulang ? 'Menyimpan...' : 'Absen Pulang (1 Klik)'}</span>
+              <Camera size={12} strokeWidth={2.5} />
+              <span>Selfie Absen Pulang</span>
             </button>
             <button
-              onClick={() => setIsAfternoonAlarmDismissed(true)}
+              onClick={() => { setIsAfternoonAlarmDismissed(true); alarmManager.stopAlarm('afternoon'); }}
               className="p-1 sm:p-2 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-200/60 transition cursor-pointer ml-auto sm:ml-0"
               title="Tutup Peringatan"
             >
@@ -666,13 +657,12 @@ export default function BentoDashboard({
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    handleAbsenPulang(e);
+                    handleOpenClockOut(e);
                   }}
-                  disabled={isSubmittingPulang}
-                  className="inline-flex items-center gap-1 bg-[#ffd231] hover:bg-[#ffc814] active:scale-95 text-black font-black text-[10px] px-2.5 py-1 rounded-full shadow-xs animate-pulse cursor-pointer disabled:opacity-50"
+                  className="inline-flex items-center gap-1 bg-[#ffd231] hover:bg-[#ffc814] active:scale-95 text-black font-black text-[10px] px-2.5 py-1 rounded-full shadow-xs animate-pulse cursor-pointer"
                 >
-                  <LogOut size={11} strokeWidth={3} />
-                  <span>{isSubmittingPulang ? 'Menyimpan...' : 'Pulang (1 Klik)'}</span>
+                  <Camera size={11} strokeWidth={2.5} />
+                  <span>Selfie Pulang</span>
                 </button>
               ) : (
                 <span className="inline-flex items-center gap-1 bg-[#ffd231] text-black font-extrabold text-[10px] px-2.5 py-1 rounded-full shadow-xs">
@@ -1027,12 +1017,11 @@ export default function BentoDashboard({
                       <TactileButton
                         size="md"
                         variant="amber"
-                        disabled={isSubmittingPulang}
                         className="relative ring-4 ring-amber-400/40 shadow-amber-500/30 animate-pulse hover:animate-none cursor-pointer"
-                        onClick={handleAbsenPulang}
+                        onClick={handleOpenClockOut}
                       >
-                        <LogOut size={15} strokeWidth={2.5} />
-                        <span>{isSubmittingPulang ? 'Menyimpan...' : 'Absen Pulang (1 Klik)'}</span>
+                        <Camera size={15} strokeWidth={2.5} />
+                        <span>Selfie Absen Pulang</span>
                       </TactileButton>
                     </div>
                   ) : (
@@ -1081,9 +1070,21 @@ export default function BentoDashboard({
         isOpen={isSmartPKLModalOpen}
         onClose={() => setIsSmartPKLModalOpen(false)}
         onSuccess={() => {
+          alarmManager.stopAlarm('morning');
           fetchAttendance();
           onTaskUpdated?.();
         }}
+      />
+
+      {/* Clock-Out Selfie Modal */}
+      <ClockOutSelfieModal
+        isOpen={isClockOutModalOpen}
+        onClose={() => setIsClockOutModalOpen(false)}
+        onSuccess={handleClockOutSuccess}
+        todayDate={currentDateStr}
+        jamMasuk={todayAttendance?.jamMasuk || '08:00'}
+        status={todayAttendance?.status || 'Hadir'}
+        keterangan={todayAttendance?.keterangan || 'Presensi PKL Hari Ini'}
       />
     </div>
   );

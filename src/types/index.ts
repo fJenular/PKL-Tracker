@@ -59,7 +59,9 @@ export interface AttendanceRecord {
   jamPulang?: string;
   keterangan?: string;
   fotoUrl?: string;
+  selfieClockOut?: boolean; // true jika absen pulang pakai selfie
   createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface AppSettings {

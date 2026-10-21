@@ -1,7 +1,10 @@
 // Web Audio API Synthesizer & Browser Notification for Attendance Alarm
+// v2 — Alarm keras, berulang tiap 30 detik, + getaran HP (Vibration API)
 
 class AlarmSoundManager {
   private audioCtx: AudioContext | null = null;
+  // Map of alarm type => setInterval ID (untuk alarm berulang)
+  private repeatIntervals: Map<string, ReturnType<typeof setInterval>> = new Map();
 
   private getAudioContext(): AudioContext | null {
     if (typeof window === 'undefined') return null;
@@ -17,58 +20,98 @@ class AlarmSoundManager {
     return this.audioCtx;
   }
 
-  /**
-   * Mainkan bunyi alarm nada harmonik
-   */
-  public playAlarm(type: 'morning' | 'afternoon'): void {
+  /** Mainkan 1x suara alarm yang kencang (gain 0.85) */
+  private playOnce(type: 'morning' | 'afternoon'): void {
     const ctx = this.getAudioContext();
     if (!ctx) return;
 
     const now = ctx.currentTime;
 
-    // Frequencies:
-    // Morning reminder: C5 -> E5 -> G5 -> C6 (Nada cerah bangun & siap absen)
-    // Afternoon reminder: A4 -> C#5 -> E5 -> A5 (Nada selesai kerja / pulang)
-    const notes = type === 'morning'
-      ? [523.25, 659.25, 783.99, 1046.50]
-      : [440.00, 554.37, 659.25, 880.00];
+    // Nada alarm: 4 nada naik + repetisi (8 nada total, lebih keras)
+    const morningNotes  = [523.25, 659.25, 783.99, 1046.50, 783.99, 1046.50, 783.99, 1046.50];
+    const afternoonNotes = [440.00, 554.37, 659.25, 880.00, 659.25, 880.00, 659.25, 880.00];
+    const notes = type === 'morning' ? morningNotes : afternoonNotes;
 
     notes.forEach((freq, idx) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
+      // Nada utama — keras (gain 0.85)
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.type = 'square';
+      osc1.frequency.setValueAtTime(freq, now + idx * 0.18);
+      gain1.gain.setValueAtTime(0, now + idx * 0.18);
+      gain1.gain.linearRampToValueAtTime(0.85, now + idx * 0.18 + 0.02);
+      gain1.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.18 + 0.32);
+      osc1.connect(gain1);
+      gain1.connect(ctx.destination);
+      osc1.start(now + idx * 0.18);
+      osc1.stop(now + idx * 0.18 + 0.35);
 
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, now + idx * 0.15);
-
-      gain.gain.setValueAtTime(0, now + idx * 0.15);
-      gain.gain.linearRampToValueAtTime(0.3, now + idx * 0.15 + 0.03);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.15 + 0.35);
-
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-
-      osc.start(now + idx * 0.15);
-      osc.stop(now + idx * 0.15 + 0.4);
+      // Lapisan harmonis (sine) supaya tidak terlalu harsh
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(freq * 2, now + idx * 0.18);
+      gain2.gain.setValueAtTime(0, now + idx * 0.18);
+      gain2.gain.linearRampToValueAtTime(0.4, now + idx * 0.18 + 0.02);
+      gain2.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.18 + 0.30);
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      osc2.start(now + idx * 0.18);
+      osc2.stop(now + idx * 0.18 + 0.33);
     });
 
-    // Ringan kedua setelah jeda singkat (efek dual-bell chime)
-    notes.forEach((freq, idx) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
+    // Getarkan HP (Vibration API) — pola: 300ms vibrate, 100ms stop, 5x
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      navigator.vibrate([300, 100, 300, 100, 300, 100, 300, 100, 500]);
+    }
+  }
 
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(freq, now + 0.8 + idx * 0.15);
+  /**
+   * Mainkan alarm sekali dan aktifkan pengulangan tiap 30 detik
+   * sampai stopAlarm(type) dipanggil.
+   */
+  public playAlarm(type: 'morning' | 'afternoon'): void {
+    // Hentikan interval lama jika ada (hindari duplikasi)
+    this.stopAlarm(type);
 
-      gain.gain.setValueAtTime(0, now + 0.8 + idx * 0.15);
-      gain.gain.linearRampToValueAtTime(0.25, now + 0.8 + idx * 0.15 + 0.03);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.8 + idx * 0.15 + 0.4);
+    // Mainkan langsung
+    this.playOnce(type);
 
-      osc.connect(gain);
-      gain.connect(ctx.destination);
+    // Ulangi setiap 30 detik
+    const intervalId = setInterval(() => {
+      this.playOnce(type);
+      // Kirim notifikasi ulang tiap kali berbunyi
+      const title = type === 'morning'
+        ? '🚨 Alarm Absen Masuk! (07:30 WIB)'
+        : '🔔 Alarm Absen Pulang! (16:00 WIB)';
+      const body = type === 'morning'
+        ? 'Kamu belum absen masuk PKL hari ini. Segera lakukan selfie absensi!'
+        : 'Jam kerja PKL selesai. Segera lakukan selfie absen pulang!';
+      this.sendNotification(title, body);
+    }, 30_000); // setiap 30 detik
 
-      osc.start(now + 0.8 + idx * 0.15);
-      osc.stop(now + 0.8 + idx * 0.15 + 0.45);
-    });
+    this.repeatIntervals.set(type, intervalId);
+  }
+
+  /**
+   * Hentikan alarm berulang (dipanggil saat user dismiss atau sudah absen)
+   */
+  public stopAlarm(type: 'morning' | 'afternoon'): void {
+    const existing = this.repeatIntervals.get(type);
+    if (existing !== undefined) {
+      clearInterval(existing);
+      this.repeatIntervals.delete(type);
+    }
+    // Stop vibration
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      navigator.vibrate(0);
+    }
+  }
+
+  /** Hentikan SEMUA alarm */
+  public stopAllAlarms(): void {
+    this.stopAlarm('morning');
+    this.stopAlarm('afternoon');
   }
 
   /**
@@ -80,14 +123,16 @@ class AlarmSoundManager {
       if (Notification.permission === 'granted') {
         new Notification(title, {
           body,
-          icon: '/assets/logo.png',
+          icon: '/favicon.ico',
+          requireInteraction: true, // Notifikasi tidak hilang sendiri
         });
       } else if (Notification.permission !== 'denied') {
         const permission = await Notification.requestPermission();
         if (permission === 'granted') {
           new Notification(title, {
             body,
-            icon: '/assets/logo.png',
+            icon: '/favicon.ico',
+            requireInteraction: true,
           });
         }
       }
@@ -98,3 +143,4 @@ class AlarmSoundManager {
 }
 
 export const alarmManager = new AlarmSoundManager();
+

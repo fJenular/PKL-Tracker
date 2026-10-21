@@ -238,3 +238,25 @@ export function getAttendance(): AttendanceRecord[] {
 export function saveAttendance(records: AttendanceRecord[]): void {
   writeDataFile<AttendanceRecord[]>('attendance.json', records);
 }
+
+export function getDeletedTaskSignatures(): string[] {
+  return readDataFile<string[]>('deleted_tasks.json', []);
+}
+
+export function addDeletedTaskSignature(sigOrId: string | string[]): void {
+  const current = getDeletedTaskSignatures();
+  const set = new Set(current);
+  if (Array.isArray(sigOrId)) {
+    sigOrId.forEach(s => {
+      if (s) set.add(s);
+    });
+  } else if (sigOrId) {
+    set.add(sigOrId);
+  }
+  writeDataFile<string[]>('deleted_tasks.json', Array.from(set));
+}
+
+export function clearDeletedTaskSignatures(): void {
+  writeDataFile<string[]>('deleted_tasks.json', []);
+}
+

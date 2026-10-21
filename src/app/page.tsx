@@ -22,6 +22,7 @@ export default function Home() {
 
   // Synchronization status
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isPulling, setIsPulling] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
 
   const showNotification = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
@@ -55,10 +56,9 @@ export default function Home() {
   const handleSyncToGoogle = async () => {
     try {
       setIsSyncing(true);
-      const res = await fetch('/api/google/sync', {
+      const res = await fetch('/api/google/sync-all', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({})
       });
       const data = await res.json();
       if (data.success) {
@@ -72,6 +72,25 @@ export default function Home() {
       showNotification(err.message || 'Sinkronisasi gagal', 'error');
     } finally {
       setIsSyncing(false);
+    }
+  };
+
+  // Pull latest from Google Sheets
+  const handlePullFromGoogle = async () => {
+    try {
+      setIsPulling(true);
+      const res = await fetch('/api/google/pull', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        showNotification(data.message, 'success');
+        if (data.data) setTasks(data.data);
+      } else {
+        showNotification(data.message || 'Gagal menarik data dari Google Spreadsheet', 'error');
+      }
+    } catch (err: any) {
+      showNotification(err.message || 'Gagal menarik data dari Google Spreadsheet', 'error');
+    } finally {
+      setIsPulling(false);
     }
   };
 
@@ -144,7 +163,9 @@ export default function Home() {
         onOpenGuide={() => setIsGuideModalOpen(true)}
         onOpenReport={() => setIsReportModalOpen(true)}
         onSyncAll={handleSyncToGoogle}
+        onPullFromGoogle={handlePullFromGoogle}
         isSyncing={isSyncing}
+        isPulling={isPulling}
         unsyncedCount={unsyncedCount}
       />
 
