@@ -644,12 +644,12 @@ export default function BentoDashboard({
                     className="inline-flex items-center gap-1 bg-[#ffd231] hover:bg-[#ffc814] active:scale-95 text-black font-black text-[10px] px-2.5 py-1 rounded-full shadow-xs animate-pulse cursor-pointer"
                   >
                     <AlertCircle size={11} strokeWidth={3} />
-                    <span>Belum Absen!</span>
+                    <span>Clock In</span>
                   </button>
                 ) : (
                   <span className="inline-flex items-center gap-1 bg-[#ffd231] text-black font-extrabold text-[10px] px-2.5 py-1 rounded-full shadow-xs">
                     <CheckCircle2 size={11} strokeWidth={2.5} />
-                    <span>Hadir ({todayAttendance?.jamMasuk || '07:44'})</span>
+                    <span>Sudah Clock In ({todayAttendance?.jamMasuk || '07:44'})</span>
                   </span>
                 )
               ) : !hasCheckedOut ? (
@@ -662,12 +662,12 @@ export default function BentoDashboard({
                   className="inline-flex items-center gap-1 bg-[#ffd231] hover:bg-[#ffc814] active:scale-95 text-black font-black text-[10px] px-2.5 py-1 rounded-full shadow-xs animate-pulse cursor-pointer"
                 >
                   <Camera size={11} strokeWidth={2.5} />
-                  <span>Selfie Pulang</span>
+                  <span>Clock Out</span>
                 </button>
               ) : (
                 <span className="inline-flex items-center gap-1 bg-[#ffd231] text-black font-extrabold text-[10px] px-2.5 py-1 rounded-full shadow-xs">
                   <CheckCircle2 size={11} strokeWidth={2.5} />
-                  <span>Pulang ({todayAttendance?.jamPulang}) ✓</span>
+                  <span>Sudah Clock Out ({todayAttendance?.jamPulang}) ✓</span>
                 </span>
               )}
             </div>
@@ -707,25 +707,71 @@ export default function BentoDashboard({
             <Settings className="w-9 h-9 text-white/15 absolute -bottom-1 -right-1 pointer-events-none" />
           </button>
 
-          {/* Card I: SmartPKL */}
+          {/* Card I: SmartPKL (Menyesuaikan waktu: Pagi = Clock In, Pulang = Clock Out) */}
           <button
-            onClick={() => setIsSmartPKLModalOpen(true)}
-            className="relative overflow-hidden rounded-[1.4rem] bg-gradient-to-br from-[#6366f1] to-[#4f46e5] p-3 text-white flex flex-col justify-between shadow-md h-[106px] text-left active:scale-[0.98] transition-transform group cursor-pointer"
+            onClick={() => {
+              if (isAfterWork) {
+                handleOpenClockOut();
+              } else {
+                setIsSmartPKLModalOpen(true);
+              }
+            }}
+            className={`relative overflow-hidden rounded-[1.4rem] p-3 text-white flex flex-col justify-between shadow-md h-[106px] text-left active:scale-[0.98] transition-transform group cursor-pointer ${
+              isAfterWork
+                ? hasCheckedOut
+                  ? 'bg-gradient-to-br from-[#059669] to-[#047857]'
+                  : 'bg-gradient-to-br from-[#ea580c] to-[#c2410c]'
+                : hasCheckedIn
+                ? 'bg-gradient-to-br from-[#059669] to-[#047857]'
+                : 'bg-gradient-to-br from-[#6366f1] to-[#4f46e5]'
+            }`}
           >
             <div>
               <h4 className="text-xs font-bold leading-tight">
-                SmartPKL
+                {isAfterWork ? 'Absen Pulang' : 'SmartPKL'}
               </h4>
-              <p className="text-[9px] text-white/70 leading-tight mt-0.5">
-                Foto Selfie
+              <p className="text-[9px] text-white/80 leading-tight mt-0.5">
+                {isAfterWork
+                  ? hasCheckedOut
+                    ? `Pulang (${todayAttendance?.jamPulang || '16:00'})`
+                    : 'Selfie Pulang'
+                  : hasCheckedIn
+                  ? `Hadir (${todayAttendance?.jamMasuk || '07:44'})`
+                  : 'Foto Selfie'}
               </p>
             </div>
             <div className="relative z-10">
-              <span className="inline-flex items-center gap-0.5 bg-[#ffd231] text-black font-extrabold text-[9px] px-1.5 py-0.5 rounded-full shadow-xs">
-                Absen Kamera
+              <span className="inline-flex items-center gap-1 bg-[#ffd231] text-black font-extrabold text-[9px] px-2 py-0.5 rounded-full shadow-xs">
+                {isAfterWork ? (
+                  hasCheckedOut ? (
+                    <>
+                      <CheckCircle2 size={10} strokeWidth={2.5} />
+                      <span>Sudah Clock Out</span>
+                    </>
+                  ) : (
+                    <>
+                      <LogOut size={10} strokeWidth={2.5} />
+                      <span className="font-black animate-pulse">Clock Out</span>
+                    </>
+                  )
+                ) : hasCheckedIn ? (
+                  <>
+                    <CheckCircle2 size={10} strokeWidth={2.5} />
+                    <span>Sudah Clock In</span>
+                  </>
+                ) : (
+                  <>
+                    <Camera size={10} strokeWidth={2.5} />
+                    <span className="font-black animate-pulse">Clock In</span>
+                  </>
+                )}
               </span>
             </div>
-            <Camera className="w-9 h-9 text-white/15 absolute -bottom-1 -right-1 pointer-events-none" />
+            {isAfterWork ? (
+              <LogOut className="w-9 h-9 text-white/15 absolute -bottom-1 -right-1 pointer-events-none" />
+            ) : (
+              <Camera className="w-9 h-9 text-white/15 absolute -bottom-1 -right-1 pointer-events-none" />
+            )}
           </button>
 
           {/* Card J: Profile Siswa */}
@@ -750,24 +796,6 @@ export default function BentoDashboard({
           </Link>
         </div>
 
-        {/* 6. Bottom Navigation Pill (Like "Для вас  Журнал" in screenshot) */}
-        <div className="fixed bottom-3 inset-x-0 mx-auto w-fit z-40">
-          <div className="bg-[#1b1c22]/95 backdrop-blur-md border border-white/10 rounded-full px-5 py-2.5 shadow-2xl flex items-center gap-6">
-            <span className="text-xs font-bold text-white cursor-pointer flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-              Untuk Anda
-            </span>
-            <Link href="/tugas" className="text-xs font-medium text-slate-400 hover:text-white transition-colors">
-              Tugas
-            </Link>
-            <Link href="/absensi" className="text-xs font-medium text-slate-400 hover:text-white transition-colors">
-              Presensi
-            </Link>
-            <Link href="/profile" className="text-xs font-medium text-slate-400 hover:text-white transition-colors">
-              Profil
-            </Link>
-          </div>
-        </div>
       </div>
 
       {/* =========================================================================
@@ -1069,6 +1097,7 @@ export default function BentoDashboard({
       <SmartPKLAbsenModal
         isOpen={isSmartPKLModalOpen}
         onClose={() => setIsSmartPKLModalOpen(false)}
+        todayAttendance={todayAttendance}
         onSuccess={() => {
           alarmManager.stopAlarm('morning');
           fetchAttendance();

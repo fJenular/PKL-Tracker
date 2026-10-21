@@ -14,11 +14,13 @@ import {
   Clock,
   UserCheck,
 } from 'lucide-react';
+import { AttendanceRecord } from '@/types';
 
 interface SmartPKLAbsenModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  todayAttendance?: AttendanceRecord | null;
 }
 
 type AbsenStatus = '1' | '2' | '4'; // 1=Hadir, 2=Izin, 4=Sakit
@@ -30,7 +32,8 @@ const STATUS_OPTIONS: { value: AbsenStatus; label: string; color: string; bg: st
   { value: '4', label: 'Sakit', color: 'text-red-700', bg: 'bg-red-50 border-red-300 hover:bg-red-100' },
 ];
 
-export default function SmartPKLAbsenModal({ isOpen, onClose, onSuccess }: SmartPKLAbsenModalProps) {
+export default function SmartPKLAbsenModal({ isOpen, onClose, onSuccess, todayAttendance }: SmartPKLAbsenModalProps) {
+  const [internalAttendance, setInternalAttendance] = useState<AttendanceRecord | null>(null);
   const [step, setStep] = useState<StepState>('form');
   const [selectedStatus, setSelectedStatus] = useState<AbsenStatus>('1');
   const [alasan, setAlasan] = useState('');
@@ -41,6 +44,34 @@ export default function SmartPKLAbsenModal({ isOpen, onClose, onSuccess }: Smart
   const [cameraError, setCameraError] = useState('');
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [isCameraLoading, setIsCameraLoading] = useState(false);
+
+  // Cek apakah hari ini sudah pernah absen pagi
+  useEffect(() => {
+    if (isOpen) {
+      if (todayAttendance !== undefined) {
+        setInternalAttendance(todayAttendance);
+      } else {
+        fetch('/api/attendance')
+          .then((r) => r.json())
+          .then((res) => {
+            if (res.success && Array.isArray(res.data)) {
+              const todayStr = new Date().toISOString().split('T')[0];
+              const rec = res.data.find((r: AttendanceRecord) => r.tanggal === todayStr);
+              setInternalAttendance(rec || null);
+            }
+          })
+          .catch(() => {});
+      }
+    }
+  }, [isOpen, todayAttendance]);
+
+  const activeRecord = todayAttendance !== undefined ? todayAttendance : internalAttendance;
+  const hasCheckedIn = Boolean(
+    activeRecord &&
+    activeRecord.jamMasuk &&
+    activeRecord.jamMasuk !== '-' &&
+    activeRecord.jamMasuk.trim() !== ''
+  );
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -295,8 +326,90 @@ export default function SmartPKLAbsenModal({ isOpen, onClose, onSuccess }: Smart
 
         {/* Body */}
         <div className="px-6 py-5">
-          {/* ── STEP: FORM ── */}
-          {step === 'form' && (
+          {/* ── VALIDASI: SUDAH ABSEN PAGI INI ── */}
+          {hasCheckedIn ? (
+            <div className="py-2 text-center space-y-4">
+              <div
+                className="w-16 h-16 rounded-3xl mx-auto flex items-center justify-center shadow-lg"
+                style={{
+                  background: 'rgba(16, 185, 129, 0.15)',
+                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                  boxShadow: '0 0 25px rgba(16, 185, 129, 0.2)'
+                }}
+              >
+                <CheckCircle2 className="w-9 h-9 text-emerald-400" />
+              </div>
+
+              <div>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  <CheckCircle2 size={13} />
+                  Presensi Masuk Tercatat
+                </span>
+                <h3 className="text-white font-bold text-lg mt-2.5">
+                  Kamu Sudah Absen Pagi Ini!
+                </h3>
+                <p className="text-slate-300 text-xs mt-1 max-w-xs mx-auto leading-relaxed">
+                  Presensi masuk kamu sudah berhasil tersimpan di sistem. Kamu tidak dapat melakukan absen masuk lagi hari ini.
+                </p>
+              </div>
+
+              {/* Detail Info Card */}
+              <div
+                className="rounded-2xl p-4 text-left space-y-2.5"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)'
+                }}
+              >
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-400">Jam Masuk (Clock In)</span>
+                  <span className="font-bold text-emerald-400 font-mono text-sm">
+                    {activeRecord?.jamMasuk || '07:44'} WIB
+                  </span>
+                </div>
+                <div className="h-px bg-white/10" />
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-400">Status Kehadiran</span>
+                  <span className="font-semibold text-emerald-300 px-2 py-0.5 rounded-md bg-emerald-500/20">
+                    {activeRecord?.status || 'Hadir'}
+                  </span>
+                </div>
+                <div className="h-px bg-white/10" />
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-400">Tanggal</span>
+                  <span className="font-medium text-slate-300">
+                    {activeRecord?.tanggal || new Date().toISOString().split('T')[0]}
+                  </span>
+                </div>
+                {activeRecord?.keterangan && (
+                  <>
+                    <div className="h-px bg-white/10" />
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-400">Keterangan</span>
+                      <span className="font-medium text-slate-300 truncate max-w-[190px]">
+                        {activeRecord.keterangan}
+                      </span>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div className="pt-2">
+                <button
+                  onClick={onClose}
+                  className="w-full py-3 rounded-2xl font-bold text-sm text-white transition border border-white/10 shadow-lg cursor-pointer hover:opacity-90 active:scale-[0.98]"
+                  style={{
+                    background: 'linear-gradient(135deg, #10b981, #059669)',
+                  }}
+                >
+                  Tutup Keterangan
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* ── STEP: FORM ── */}
+              {step === 'form' && (
             <div className="space-y-5">
               {/* Current time */}
               <div
@@ -595,6 +708,8 @@ export default function SmartPKLAbsenModal({ isOpen, onClose, onSuccess }: Smart
                 </button>
               </div>
             </div>
+          )}
+            </>
           )}
         </div>
       </div>

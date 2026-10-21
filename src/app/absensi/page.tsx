@@ -766,6 +766,7 @@ function AbsensiContent() {
       <SmartPKLAbsenModal
         isOpen={isSmartPKLModalOpen}
         onClose={() => setIsSmartPKLModalOpen(false)}
+        todayAttendance={todayRecord}
         onSuccess={() => {
           showNotification('Absensi SmartPKL berhasil dikirim! ✅', 'success');
           fetchAttendance();

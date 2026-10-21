@@ -92,6 +92,25 @@ export async function POST(request: Request) {
       );
     }
 
+    // ─── VALIDASI: Cegah duplikasi absen pagi ────────────────────────
+    if (action === 'absen') {
+      try {
+        const { getAttendance } = await import('@/lib/storage');
+        const records = getAttendance();
+        const todayStr = new Date().toISOString().split('T')[0];
+        const existingToday = records.find((r) => r.tanggal === todayStr);
+        if (existingToday && existingToday.jamMasuk && existingToday.jamMasuk !== '-' && existingToday.jamMasuk.trim() !== '') {
+          return NextResponse.json({
+            success: false,
+            alreadyCheckedIn: true,
+            message: `Kamu sudah absen pagi ini (Jam Masuk: ${existingToday.jamMasuk} WIB). Presensi masuk hari ini sudah tercatat.`,
+          });
+        }
+      } catch (checkErr) {
+        console.warn('[smartpkl] Gagal cek attendance lokal:', checkErr);
+      }
+    }
+
     // ─── STEP 1: Login ───────────────────────────────────────────────
     const loginForm = new URLSearchParams({
       username: finalUsername,
