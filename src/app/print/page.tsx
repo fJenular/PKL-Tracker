@@ -4,7 +4,7 @@ import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Task, AppSettings } from '@/types';
 import { formatDateToIndonesian } from '@/lib/dateUtils';
-import { Printer, ArrowLeft } from 'lucide-react';
+import { Printer, ArrowLeft, Download } from 'lucide-react';
 import Link from 'next/link';
 
 function PrintContent() {
@@ -73,15 +73,52 @@ function PrintContent() {
     map.forEach(val => groupedRows.push(val));
   }
 
+  const [isExportingWord, setIsExportingWord] = useState(false);
+
   const profile = settings?.profile || {
     namaSiswa: 'Fakhri Zainul Arifin',
     nis: '2324009',
     sekolah: 'SMK TI BAZMA',
     tempatPkl: 'Yayasan Kesehatan Pertamina',
     bulanPelaksanaan: 'Oktober 2026',
-    pembimbingPkl: 'Ristina Eka Salsabila',
-    userDuDi: '(..................................)',
-    pesertaPkl: 'Fakhri Zainul Arifin'
+    pembimbingPkl: 'Muhamad Dzikri Fauzan, S.Kom, Gr.',
+    userDuDi: 'Achmad Fauzy',
+    pesertaPkl: 'Fakhri Zainul Arifin',
+    defaultTempat: 'Ruang IT / Server'
+  };
+
+  const handleDownloadWord = async () => {
+    try {
+      setIsExportingWord(true);
+      const response = await fetch('/api/export-docx', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tasks: selectedTasks,
+          profile,
+          bulanPelaksanaan: bulanParam || profile.bulanPelaksanaan,
+          groupByDate: groupedParam
+        })
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const safeMonth = (bulanParam || profile.bulanPelaksanaan || 'Oktober_2026').replace(/\s+/g, '_');
+        const safeName = (profile.namaSiswa || 'Siswa').split(' ')[0];
+        a.download = `Laporan_Hasil_PKL_${safeMonth}_${safeName}.docx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+    } catch (err) {
+      console.error('Error downloading docx:', err);
+    } finally {
+      setIsExportingWord(false);
+    }
   };
 
   return (
@@ -95,13 +132,24 @@ function PrintContent() {
           <ArrowLeft className="w-3.5 h-3.5" />
           <span>Kembali ke Dashboard</span>
         </Link>
-        <button
-          onClick={() => window.print()}
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded-lg shadow-sm transition-all"
-        >
-          <Printer className="w-4 h-4" />
-          <span>Cetak / Simpan PDF Sekarang</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleDownloadWord}
+            disabled={isExportingWord}
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 px-3.5 py-2 rounded-lg shadow-sm transition-all cursor-pointer disabled:opacity-50"
+            title="Download Word dengan Header & Footer di Section 1"
+          >
+            <Download className="w-4 h-4" />
+            <span>{isExportingWord ? 'Menyiapkan...' : 'Download Word'}</span>
+          </button>
+          <button
+            onClick={() => window.print()}
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded-lg shadow-sm transition-all cursor-pointer"
+          >
+            <Printer className="w-4 h-4" />
+            <span>Cetak / Simpan PDF Sekarang</span>
+          </button>
+        </div>
       </div>
 
       {/* A4 Sheet Container */}
@@ -240,39 +288,43 @@ function PrintContent() {
           </table>
         </div>
 
-        {/* Signatures */}
+        {/* Signatures (Sesuai Gambar 1) */}
         <div className="mt-12 text-xs sm:text-sm text-black break-inside-avoid" style={{ pageBreakInside: 'avoid' }}>
-          <p className="text-center mb-4 font-normal">Mengetahui,</p>
+          <p className="text-center mb-6 font-normal">Mengetahui,</p>
           
-          <div className="grid grid-cols-3 gap-4 text-center">
-            <div className="flex flex-col justify-between min-h-[120px]">
-              <p className="font-semibold">User DU/DI</p>
-              <p className="font-normal">{profile.userDuDi || '(..................................)'}</p>
-            </div>
-
-            <div className="flex flex-col justify-between min-h-[120px]">
-              <p className="font-semibold">Pembimbing PKL</p>
-              <p className="font-normal underline underline-offset-2 font-medium">
-                {profile.pembimbingPkl || 'Ristina Eka Salsabila'}
-              </p>
-            </div>
-
-            <div className="flex flex-col justify-between min-h-[120px]">
-              <p className="font-semibold">Peserta PKL</p>
-              <p className="font-normal underline underline-offset-2 font-medium">
-                {profile.pesertaPkl || profile.namaSiswa || 'Peserta PKL'}
-              </p>
-            </div>
-          </div>
+          <table className="w-full border-none text-center" style={{ borderCollapse: 'collapse' }}>
+            <tbody>
+              <tr>
+                <td style={{ width: '33%', verticalAlign: 'top', border: 'none', padding: '0 4px' }}>
+                  <p className="font-semibold text-black mb-16 sm:mb-20">Pembimbing DU/DI</p>
+                  <p className="font-normal text-black whitespace-nowrap overflow-visible">
+                    {profile.userDuDi || 'Achmad Fauzy'}
+                  </p>
+                </td>
+                <td style={{ width: '34%', verticalAlign: 'top', border: 'none', padding: '0 4px' }}>
+                  <p className="font-semibold text-black mb-16 sm:mb-20">Pembimbing PKL</p>
+                  <p className="font-normal text-black whitespace-nowrap overflow-visible">
+                    {profile.pembimbingPkl || 'Muhamad Dzikri Fauzan, S.Kom, Gr.'}
+                  </p>
+                </td>
+                <td style={{ width: '33%', verticalAlign: 'top', border: 'none', padding: '0 4px' }}>
+                  <p className="font-semibold text-black mb-16 sm:mb-20">Peserta PKL</p>
+                  <p className="font-normal text-black whitespace-nowrap overflow-visible">
+                    {profile.pesertaPkl || profile.namaSiswa || 'Fakhri Zainul Arifin'}
+                  </p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
 
-        {/* Footer Image */}
-        <div className="mt-14 pt-4 border-t border-slate-100 text-center break-inside-avoid" style={{ pageBreakInside: 'avoid' }}>
+        {/* Footer Image (Sesuai Gambar 2) */}
+        <div className="mt-14 pt-2 text-center break-inside-avoid" style={{ pageBreakInside: 'avoid' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/assets/kop-footer.png"
             alt="Footer SMK TI BAZMA"
-            className="w-full"
+            className="w-full object-contain mx-auto"
           />
         </div>
       </div>

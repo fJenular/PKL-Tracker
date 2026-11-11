@@ -103,8 +103,8 @@ const DEFAULT_SETTINGS: AppSettings = {
     sekolah: 'SMK TI BAZMA',
     tempatPkl: 'Yayasan Kesehatan Pertamina',
     bulanPelaksanaan: 'Oktober 2026',
-    pembimbingPkl: 'Ristina Eka Salsabila',
-    userDuDi: '(..................................)',
+    pembimbingPkl: 'Muhamad Dzikri Fauzan, S.Kom, Gr.',
+    userDuDi: 'Achmad Fauzy',
     pesertaPkl: 'Fakhri Zainul Arifin',
     defaultTempat: 'Ruang IT / Server'
   },

@@ -22,6 +22,7 @@ import {
   getBulanTahunFromDate, 
   formatMonthRange 
 } from '@/lib/dateUtils';
+import { downloadTaskReportWordDoc } from '@/lib/wordExport';
 
 interface ReportModalProps {
   isOpen: boolean;
@@ -60,6 +61,7 @@ export default function ReportModal({
   const [dateTo, setDateTo] = useState<string>(initialDateTo || '');
   const [customBulanPelaksanaan, setCustomBulanPelaksanaan] = useState<string>('');
   const [isEditingBulan, setIsEditingBulan] = useState(false);
+  const [isExportingWord, setIsExportingWord] = useState(false);
 
   // Available months (YYYY-MM)
   const availableMonths = useMemo(() => {
@@ -191,8 +193,69 @@ export default function ReportModal({
     map.forEach(val => groupedRows.push(val));
   }
 
+  const profile = settings?.profile || {
+    namaSiswa: 'Fakhri Zainul Arifin',
+    nis: '2324009',
+    sekolah: 'SMK TI BAZMA',
+    tempatPkl: 'Yayasan Kesehatan Pertamina',
+    bulanPelaksanaan: 'Oktober 2026',
+    pembimbingPkl: 'Muhamad Dzikri Fauzan, S.Kom, Gr.',
+    userDuDi: 'Achmad Fauzy',
+    pesertaPkl: 'Fakhri Zainul Arifin',
+    defaultTempat: 'Ruang IT / Server'
+  };
+
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleDownloadWord = async () => {
+    try {
+      setIsExportingWord(true);
+      // Attempt to download native .docx from server API
+      const response = await fetch('/api/export-docx', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tasks: selectedTasks,
+          profile,
+          bulanPelaksanaan: currentBulanPelaksanaan,
+          groupByDate
+        })
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const safeMonth = currentBulanPelaksanaan.replace(/\s+/g, '_');
+        const safeName = (profile.namaSiswa || 'Siswa').split(' ')[0];
+        a.download = `Laporan_Hasil_PKL_${safeMonth}_${safeName}.docx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } else {
+        // Fallback to client-side MHTML .doc generator
+        await downloadTaskReportWordDoc({
+          tasks: selectedTasks,
+          profile,
+          bulanPelaksanaan: currentBulanPelaksanaan,
+          groupByDate
+        });
+      }
+    } catch (err) {
+      console.warn('Fallback to client doc generator:', err);
+      await downloadTaskReportWordDoc({
+        tasks: selectedTasks,
+        profile,
+        bulanPelaksanaan: currentBulanPelaksanaan,
+        groupByDate
+      });
+    } finally {
+      setIsExportingWord(false);
+    }
   };
 
   const handleOpenPrintPage = () => {
@@ -217,17 +280,6 @@ export default function ReportModal({
     } else {
       setSelectedIds([]);
     }
-  };
-
-  const profile = settings?.profile || {
-    namaSiswa: 'Fakhri Zainul Arifin',
-    nis: '2324009',
-    sekolah: 'SMK TI BAZMA',
-    tempatPkl: 'Yayasan Kesehatan Pertamina',
-    bulanPelaksanaan: 'Oktober 2026',
-    pembimbingPkl: 'Ristina Eka Salsabila',
-    userDuDi: '(..................................)',
-    pesertaPkl: 'Fakhri Zainul Arifin'
   };
 
   return (
@@ -267,6 +319,17 @@ export default function ReportModal({
             >
               <ExternalLink className="w-3.5 h-3.5" />
               <span>Tab Cetak</span>
+            </button>
+
+            {/* Download Word (.docx / .doc) Button */}
+            <button
+              onClick={handleDownloadWord}
+              disabled={isExportingWord}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white hover:bg-blue-700 shadow-sm transition-all cursor-pointer disabled:opacity-50"
+              title="Download Microsoft Word dengan Header & Footer resmi terpasang di Section 1"
+            >
+              <Download className="w-4 h-4" />
+              <span>{isExportingWord ? 'Menyiapkan...' : 'Download Word'}</span>
             </button>
 
             {/* Print / Save PDF Button */}
@@ -585,42 +648,43 @@ export default function ReportModal({
               </table>
             </div>
 
-            {/* Signature Block (Lembar Pengesahan) */}
-            <div className="mt-12 text-xs sm:text-sm text-black page-break-inside-avoid">
-              <p className="text-center mb-4 font-normal">Mengetahui,</p>
+            {/* Signature Block (Lembar Pengesahan Sesuai Gambar 1) */}
+            <div className="mt-12 text-xs sm:text-sm text-black page-break-inside-avoid" style={{ pageBreakInside: 'avoid' }}>
+              <p className="text-center mb-6 font-normal">Mengetahui,</p>
               
-              <div className="grid grid-cols-3 gap-4 text-center">
-                {/* Column 1: User DU/DI */}
-                <div className="flex flex-col justify-between min-h-[120px]">
-                  <p className="font-semibold">User DU/DI</p>
-                  <p className="font-normal">{profile.userDuDi || '(..................................)'}</p>
-                </div>
-
-                {/* Column 2: Pembimbing PKL */}
-                <div className="flex flex-col justify-between min-h-[120px]">
-                  <p className="font-semibold">Pembimbing PKL</p>
-                  <p className="font-normal underline underline-offset-2 font-medium">
-                    {profile.pembimbingPkl || 'Ristina Eka Salsabila'}
-                  </p>
-                </div>
-
-                {/* Column 3: Peserta PKL */}
-                <div className="flex flex-col justify-between min-h-[120px]">
-                  <p className="font-semibold">Peserta PKL</p>
-                  <p className="font-normal underline underline-offset-2 font-medium">
-                    {profile.pesertaPkl || profile.namaSiswa || 'Peserta PKL'}
-                  </p>
-                </div>
-              </div>
+              <table className="w-full border-none text-center" style={{ borderCollapse: 'collapse' }}>
+                <tbody>
+                  <tr>
+                    <td style={{ width: '33%', verticalAlign: 'top', border: 'none', padding: '0 4px' }}>
+                      <p className="font-semibold text-black mb-16 sm:mb-20">Pembimbing DU/DI</p>
+                      <p className="font-normal text-black whitespace-nowrap overflow-visible">
+                        {profile.userDuDi || 'Achmad Fauzy'}
+                      </p>
+                    </td>
+                    <td style={{ width: '34%', verticalAlign: 'top', border: 'none', padding: '0 4px' }}>
+                      <p className="font-semibold text-black mb-16 sm:mb-20">Pembimbing PKL</p>
+                      <p className="font-normal text-black whitespace-nowrap overflow-visible">
+                        {profile.pembimbingPkl || 'Muhamad Dzikri Fauzan, S.Kom, Gr.'}
+                      </p>
+                    </td>
+                    <td style={{ width: '33%', verticalAlign: 'top', border: 'none', padding: '0 4px' }}>
+                      <p className="font-semibold text-black mb-16 sm:mb-20">Peserta PKL</p>
+                      <p className="font-normal text-black whitespace-nowrap overflow-visible">
+                        {profile.pesertaPkl || profile.namaSiswa || 'Fakhri Zainul Arifin'}
+                      </p>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
 
-            {/* Footer Image */}
-            <div className="mt-14 pt-4 border-t border-slate-100 text-center">
+            {/* Footer Image (Sesuai Gambar 2) */}
+            <div className="mt-14 pt-2 text-center page-break-inside-avoid" style={{ pageBreakInside: 'avoid' }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/assets/kop-footer.png"
                 alt="Footer SMK TI BAZMA"
-                className="w-full max-h-16 object-contain mx-auto"
+                className="w-full object-contain mx-auto"
               />
             </div>
           </div>

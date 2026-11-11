@@ -583,26 +583,26 @@ export default function SettingsModal({
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
                     <label className="block text-xs font-medium text-slate-600 mb-1">
-                      User DU/DI (Instansi)
+                      Pembimbing DU/DI (Instansi)
                     </label>
                     <input
                       type="text"
                       value={userDuDi}
                       onChange={(e) => setUserDuDi(e.target.value)}
-                      placeholder="(..................................)"
+                      placeholder="Achmad Fauzy"
                       className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
                     />
                   </div>
 
                   <div>
                     <label className="block text-xs font-medium text-slate-600 mb-1">
-                      Pembimbing PKL
+                      Pembimbing PKL (Sekolah)
                     </label>
                     <input
                       type="text"
                       value={pembimbingPkl}
                       onChange={(e) => setPembimbingPkl(e.target.value)}
-                      placeholder="Ristina Eka Salsabila"
+                      placeholder="Muhamad Dzikri Fauzan, S.Kom, Gr."
                       className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
                     />
                   </div>
